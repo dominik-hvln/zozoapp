@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Phone, MessageSquare } from "lucide-react";
-import LocationHandler from './LocationHandler';
+import LocationHandler from "./LocationHandler";
 
 interface ScanData {
     scanId: string;
@@ -10,6 +10,7 @@ interface ScanData {
     message: string | null;
 }
 
+// Funkcja do pobierania danych z API (bez zmian)
 async function getScanData(uniqueCode: string): Promise<ScanData> {
     const res = await fetch(`http://localhost:3001/scans/${uniqueCode}`, { cache: 'no-store' });
     if (!res.ok) {
@@ -18,9 +19,12 @@ async function getScanData(uniqueCode: string): Promise<ScanData> {
     return res.json();
 }
 
-export default async function ScanPage({ params }: { params: { uniqueCode: string } }) {
+// Główny komponent strony
+export default async function ScanPage({ params }: { params: Promise<{ uniqueCode: string }> }) {
+    const { uniqueCode } = await params;
+
     try {
-        const data = await getScanData(params.uniqueCode);
+        const data = await getScanData(uniqueCode);
 
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
@@ -44,7 +48,7 @@ export default async function ScanPage({ params }: { params: { uniqueCode: strin
                 </Card>
             </div>
         );
-    } catch (error) {
+    } catch (_error) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
                 <Card className="w-full max-w-md text-center">
