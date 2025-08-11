@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model children {
+  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id     String        @db.Uuid
+  name        String
+  created_at  DateTime      @default(now()) @db.Timestamptz(6)
+  avatar_url  String?
+  assignments assignments[]
+  users       users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model users {
+  id            String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email         String        @unique
+  password_hash String
+  name          String?
+  created_at    DateTime      @default(now()) @db.Timestamptz(6)
+  phone         String?
+  role          String        @default("USER")
+  assignments   assignments[]
+  children      children[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model assignments {
+  id                 String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id            String           @db.Uuid
+  child_id           String           @db.Uuid
+  tattoo_instance_id String           @db.Uuid
+  custom_message     String?
+  is_active          Boolean          @default(true)
+  created_at         DateTime         @default(now()) @db.Timestamptz(6)
+  children           children         @relation(fields: [child_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tattoo_instances   tattoo_instances @relation(fields: [tattoo_instance_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users              users            @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  scans              scans[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model tattoo_instances {
+  id          String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  unique_code String        @unique
+  status      String        @default("new")
+  created_at  DateTime      @default(now()) @db.Timestamptz(6)
+  assignments assignments[]
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model scans {
+  id            String      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  assignment_id String      @db.Uuid
+  scan_time     DateTime    @default(now()) @db.Timestamptz(6)
+  ip_address    String?
+  user_agent    String?
+  latitude      Float?      @db.Real
+  longitude     Float?      @db.Real
+  assignments   assignments @relation(fields: [assignment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
