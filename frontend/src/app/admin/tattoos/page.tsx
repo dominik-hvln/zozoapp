@@ -24,10 +24,10 @@ const generateCodes = async (count: number) => (await api.post('/admin/tattoos/g
 const deactivateAssignment = async (id: string) => (await api.post(`/admin/assignments/${id}/deactivate`)).data;
 
 const FormSchema = z.object({
-    count: z.string()
-        .min(1, 'Pole jest wymagane.')
-        .transform(val => parseInt(val, 10))
-        .pipe(z.number().int().min(1, 'Musi być co najmniej 1').max(500, 'Maksymalnie 500 na raz')),
+    count: z.preprocess(
+        (a) => parseInt(String(a), 10), // Krok 1: Zawsze próbuj przekonwertować wejście na liczbę
+        z.number().min(1, 'Musi być co najmniej 1').max(500, 'Maksymalnie 500 na raz') // Krok 2: Waliduj jako liczbę
+    ),
 });
 type FormValues = z.infer<typeof FormSchema>;
 
@@ -40,7 +40,7 @@ export default function AdminTattoosPage() {
 
     const form = useForm<FormValues>({
         resolver: zodResolver(FormSchema),
-        defaultValues: { count: '50' } // <-- POPRAWKA TUTAJ
+        defaultValues: { count: 50 }
     });
 
     const mutation = useMutation({
