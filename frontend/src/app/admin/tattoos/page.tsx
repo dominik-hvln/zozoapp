@@ -1,51 +1,51 @@
 'use client';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
+
+// Import komponentów
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Download } from 'lucide-react';
-interface Assignment { id: string; users: { email: string }; children: { name: string }; tattoo_instances: { unique_code: string }; }
-interface NewTattoo { id: string; unique_code: string; created_at: string; }
+
+// --- TYPY I FUNKCJE API ---
+interface Assignment {
+    id: string;
+    users: { email: string } | null;
+    children: { name: string } | null;
+    tattoo_instances: { unique_code: string } | null;
+}
+interface NewTattoo {
+    id: string;
+    unique_code: string;
+    created_at: string;
+}
 const getAssignments = async (): Promise<Assignment[]> => (await api.get('/admin/assignments')).data;
 const getNewTattoos = async (): Promise<NewTattoo[]> => (await api.get('/admin/tattoos/new')).data;
 const generateCodes = async (count: number) => (await api.post('/admin/tattoos/generate', { count })).data;
 const deactivateAssignment = async (id: string) => (await api.post(`/admin/assignments/${id}/deactivate`)).data;
 
-const FormSchema = z.object({
-    count: z.preprocess(
-        (a) => parseInt(String(a), 10), // Krok 1: Zawsze próbuj przekonwertować wejście na liczbę
-        z.number().min(1, 'Musi być co najmniej 1').max(500, 'Maksymalnie 500 na raz') // Krok 2: Waliduj jako liczbę
-    ),
-});
-type FormValues = z.infer<typeof FormSchema>;
-
 // --- KOMPONENT ---
 export default function AdminTattoosPage() {
     const queryClient = useQueryClient();
+    const [codeCount, setCodeCount] = useState('50'); // Stan dla naszego pola input
 
     const { data: assignments, isLoading: isLoadingAssignments } = useQuery({ queryKey: ['admin-assignments'], queryFn: getAssignments });
     const { data: newTattoos, isLoading: isLoadingNew } = useQuery({ queryKey: ['admin-new-tattoos'], queryFn: getNewTattoos });
-
-    const form = useForm<FormValues>({
-        resolver: zodResolver(FormSchema),
-        defaultValues: { count: 50 }
-    });
 
     const mutation = useMutation({
         mutationFn: generateCodes,
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['admin-new-tattoos'] });
             toast.success(`Pomyślnie wygenerowano ${data.count} nowych kodów!`);
-            form.reset();
+            setCodeCount('50'); // Resetujemy stan
         },
         onError: () => toast.error('Wystąpił błąd podczas generowania kodów.'),
     });
@@ -59,9 +59,15 @@ export default function AdminTattoosPage() {
         onError: () => toast.error('Wystąpił błąd podczas dezaktywacji.'),
     });
 
-    function onSubmit(values: FormValues) {
-        mutation.mutate(values.count);
-    }
+    const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const count = parseInt(codeCount, 10);
+        if (isNaN(count) || count < 1 || count > 500) {
+            toast.error('Nieprawidłowa liczba', { description: 'Wprowadź liczbę od 1 do 500.' });
+            return;
+        }
+        mutation.mutate(count);
+    };
 
     const handleExport = () => {
         if (!newTattoos || newTattoos.length === 0) {
@@ -70,6 +76,7 @@ export default function AdminTattoosPage() {
         }
         const dataToExport = newTattoos.map(t => ({ 'Kod Tatuażu': t.unique_code }));
         const csv = Papa.unparse(dataToExport);
+
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
@@ -93,26 +100,21 @@ export default function AdminTattoosPage() {
                     <CardDescription>Podaj liczbę unikalnych kodów, które chcesz dodać do systemu.</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
-                            <FormField
-                                control={form.control}
-                                name="count"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Liczba kodów</FormLabel>
-                                        <FormControl>
-                                            <Input type="number" placeholder="np. 50" {...field} />
-                                        </FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
+                    <form onSubmit={handleSubmit} className="flex items-start gap-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="code-count">Liczba kodów</Label>
+                            <Input
+                                id="code-count"
+                                type="number"
+                                placeholder="np. 50"
+                                value={codeCount}
+                                onChange={(e) => setCodeCount(e.target.value)}
                             />
-                            <Button type="submit" disabled={mutation.isPending} className="mt-8">
-                                {mutation.isPending ? 'Generowanie...' : 'Wygeneruj Kody'}
-                            </Button>
-                        </form>
-                    </Form>
+                        </div>
+                        <Button type="submit" disabled={mutation.isPending} className="self-end">
+                            {mutation.isPending ? 'Generowanie...' : 'Wygeneruj Kody'}
+                        </Button>
+                    </form>
                 </CardContent>
             </Card>
 
@@ -169,20 +171,20 @@ export default function AdminTattoosPage() {
                             ) : (
                                 assignments?.map((a) => (
                                     <TableRow key={a.id}>
-                                        <TableCell className="font-mono">{a.tattoo_instances.unique_code}</TableCell>
-                                        <TableCell>{a.children.name}</TableCell>
-                                        <TableCell>{a.users.email}</TableCell>
+                                        <TableCell className="font-mono">{a.tattoo_instances?.unique_code || 'B/D'}</TableCell>
+                                        <TableCell>{a.children?.name || 'B/D'}</TableCell>
+                                        <TableCell>{a.users?.email || 'B/D'}</TableCell>
                                         <TableCell className="text-right">
                                             <AlertDialog>
                                                 <AlertDialogTrigger asChild>
-                                                    <Button variant="destructive" size="sm">Dezaktywuj</Button>
+                                                    <Button variant="destructive" size="sm" disabled={!a.tattoo_instances}>Dezaktywuj</Button>
                                                 </AlertDialogTrigger>
                                                 <AlertDialogContent>
                                                     <AlertDialogHeader>
                                                         <AlertDialogTitle>Czy na pewno chcesz to zrobić?</AlertDialogTitle>
                                                     </AlertDialogHeader>
                                                     <AlertDialogDescription>
-                                                        Tatuaż o kodzie {a.tattoo_instances.unique_code} zostanie permanentnie zdezaktywowany i przestanie działać.
+                                                        Tatuaż o kodzie {a.tattoo_instances?.unique_code} zostanie permanentnie zdezaktywowany i przestanie działać.
                                                     </AlertDialogDescription>
                                                     <AlertDialogFooter>
                                                         <AlertDialogCancel>Anuluj</AlertDialogCancel>
