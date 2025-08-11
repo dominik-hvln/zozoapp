@@ -48,7 +48,7 @@ export default async function ScanPage({ params }: { params: Promise<{ uniqueCod
                 </Card>
             </div>
         );
-    } catch (_error) {
+    } catch {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
                 <Card className="w-full max-w-md text-center">

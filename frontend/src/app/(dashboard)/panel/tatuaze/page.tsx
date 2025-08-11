@@ -45,7 +45,10 @@ export default function TatuazePage() {
             setSelectedChildId(null);
         },
         onError: (error: AxiosError) => {
-            const errorMessage = (error.response?.data as any)?.message || "Wystąpił nieznany błąd.";
+            let errorMessage = "Wystąpił nieznany błąd.";
+            if (error.response && typeof error.response.data === 'object' && error.response.data && 'message' in error.response.data) {
+                errorMessage = (error.response.data as { message: string }).message;
+            }
             toast.error('Błąd aktywacji', { description: errorMessage });
         }
     });
