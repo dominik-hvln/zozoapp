@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle, Sticker } from 'lucide-react';
 import { AktywneTatuaze } from '@/components/shared/AktywneTatuaze';
+import { AxiosError } from 'axios';
 interface Child { id: string; name: string; }
 const getChildren = async (): Promise<Child[]> => (await api.get('/children')).data;
 interface ActivationPayload { uniqueCode: string; childId: string; }
@@ -43,8 +44,8 @@ export default function TatuazePage() {
             setScannedCode(null);
             setSelectedChildId(null);
         },
-        onError: (error: Error) => {
-            const errorMessage = error.response?.data?.message || "Wystąpił nieznany błąd.";
+        onError: (error: AxiosError) => {
+            const errorMessage = (error.response?.data as any)?.message || "Wystąpił nieznany błąd.";
             toast.error('Błąd aktywacji', { description: errorMessage });
         }
     });
