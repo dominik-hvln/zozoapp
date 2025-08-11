@@ -10,17 +10,18 @@ import { IDetectedBarcode } from '@yudiel/react-qr-scanner';
 export default function SkanujPage() {
 
     const handleScanSuccess = (result: IDetectedBarcode[]) => {
-        // Odczytujemy tekst z pierwszego znalezionego kodu QR
         const scannedText = result[0].rawValue;
-
-        // Używamy "twardego" przekierowania, które jest najstabilniejsze
         window.location.href = `/panel/tatuaze?kod=${scannedText}`;
     };
 
-    const handleScanError = (error: Error) => {
-        // Sprawdzamy, czy to nie jest błąd "No QR code found", który jest normalny
-        if (error?.message.includes('No QR code found')) return;
-        console.error('Błąd skanera QR:', error?.message);
+    // POPRAWKA JEST TUTAJ
+    const handleScanError = (error: unknown) => {
+        if (error instanceof Error) {
+            if (error.message.includes('No QR code found')) return;
+            console.error('Błąd skanera QR:', error.message);
+        } else {
+            console.error('Wystąpił nieznany błąd skanera:', error);
+        }
     };
 
     return (
@@ -44,7 +45,6 @@ export default function SkanujPage() {
                                 facingMode: 'environment',
                             }}
                             components={{
-                                // Wyłączamy niepotrzebne elementy interfejsu skanera
                                 onOff: false,
                                 torch: false,
                             }}
