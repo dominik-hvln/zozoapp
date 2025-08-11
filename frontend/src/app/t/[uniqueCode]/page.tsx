@@ -1,5 +1,4 @@
 'use client';
-
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { User, Phone, MessageSquare, MapPin, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -14,15 +13,17 @@ interface ScanData {
 }
 
 // Ten komponent będzie teraz po stronie klienta, aby używać hooków
-export default function ScanPage({ params: { uniqueCode } }: { params: { uniqueCode: string } }) {
+export default function ScanPage({ params }: { params: { uniqueCode: string } }) {
     const [data, setData] = useState<ScanData | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [locationStatus, setLocationStatus] = useState<'idle' | 'pending' | 'success' | 'error'>('idle');
 
     useEffect(() => {
-        api.get(`/scans/${uniqueCode}`)
+        // Pobierz dane o skanie
+        api.get(`/scans/${params.uniqueCode}`)
             .then(response => {
                 setData(response.data);
+                // Po udanym pobraniu danych, poproś o lokalizację
                 askForLocation(response.data.scanId);
             })
             .catch(() => setError('Nie znaleziono aktywnego tatuażu dla tego kodu.'));
@@ -45,7 +46,7 @@ export default function ScanPage({ params: { uniqueCode } }: { params: { uniqueC
                 setLocationStatus('error');
             }
         };
-    }, [uniqueCode]);
+    }, [params.uniqueCode]);
 
     if (error) {
         return (
@@ -77,7 +78,7 @@ export default function ScanPage({ params: { uniqueCode } }: { params: { uniqueC
                     <div className="border-t pt-4 space-y-3">
                         <div className="flex items-center justify-center gap-3"><User className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">{data.parentName}</span></div>
                         {data.parentPhone && <div className="flex items-center justify-center gap-3"><Phone className="h-5 w-5 text-muted-foreground" /><a href={`tel:${data.parentPhone}`} className="font-semibold text-blue-600 hover:underline">{data.parentPhone}</a></div>}
-                        {data.message && <div className="flex items-start text-left gap-3 pt-2 bg-gray-50 p-3 rounded-md"><MessageSquare className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" /><p className="text-sm italic">&quot;{data.message}&quot;</p></div>}
+                        {data.message && <div className="flex items-start text-left gap-3 pt-2 bg-gray-50 p-3 rounded-md"><MessageSquare className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" /><p className="text-sm italic">"{data.message}"</p></div>}
                     </div>
                     <div className="border-t pt-4 mt-4">
                         {locationStatus === 'pending' && <p className="text-sm text-muted-foreground flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin"/> Oczekiwanie na zgodę na lokalizację...</p>}
