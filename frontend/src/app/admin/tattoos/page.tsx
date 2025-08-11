@@ -1,4 +1,5 @@
 'use client';
+
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useForm } from 'react-hook-form';
@@ -6,25 +7,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
-import { Download } from 'lucide-react';
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Download } from 'lucide-react';
 
-interface Assignment {
-    id: string;
-    users: { email: string };
-    children: { name: string };
-    tattoo_instances: { unique_code: string };
-}
-interface NewTattoo {
-    id: string;
-    unique_code: string;
-    created_at: string;
-}
+interface Assignment { id: string; users: { email: string }; children: { name: string }; tattoo_instances: { unique_code: string }; }
+interface NewTattoo { id: string; unique_code: string; created_at: string; }
 const getAssignments = async (): Promise<Assignment[]> => (await api.get('/admin/assignments')).data;
 const getNewTattoos = async (): Promise<NewTattoo[]> => (await api.get('/admin/tattoos/new')).data;
 const generateCodes = async (count: number) => (await api.post('/admin/tattoos/generate', { count })).data;
@@ -38,17 +31,26 @@ const FormSchema = z.object({
 });
 type FormValues = z.infer<typeof FormSchema>;
 
+// --- KOMPONENT ---
 export default function AdminTattoosPage() {
     const queryClient = useQueryClient();
 
-    const { data: assignments, isLoading: isLoadingAssignments } = useQuery({
-        queryKey: ['admin-assignments'],
-        queryFn: getAssignments
+    const { data: assignments, isLoading: isLoadingAssignments } = useQuery({ queryKey: ['admin-assignments'], queryFn: getAssignments });
+    const { data: newTattoos, isLoading: isLoadingNew } = useQuery({ queryKey: ['admin-new-tattoos'], queryFn: getNewTattoos });
+
+    const form = useForm<FormValues>({
+        resolver: zodResolver(FormSchema),
+        defaultValues: { count: '50' } // <-- POPRAWKA TUTAJ
     });
 
-    const { data: newTattoos, isLoading: isLoadingNew } = useQuery({
-        queryKey: ['admin-new-tattoos'],
-        queryFn: getNewTattoos
+    const mutation = useMutation({
+        mutationFn: generateCodes,
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['admin-new-tattoos'] });
+            toast.success(`Pomyślnie wygenerowano ${data.count} nowych kodów!`);
+            form.reset();
+        },
+        onError: () => toast.error('Wystąpił błąd podczas generowania kodów.'),
     });
 
     const deactivateMutation = useMutation({
@@ -60,22 +62,6 @@ export default function AdminTattoosPage() {
         onError: () => toast.error('Wystąpił błąd podczas dezaktywacji.'),
     });
 
-    const form = useForm<FormValues>({
-        resolver: zodResolver(FormSchema),
-        defaultValues: { count: 50 }
-    });
-
-    const mutation = useMutation({
-        mutationFn: generateCodes,
-        onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ['admin-assignments'] });
-            queryClient.invalidateQueries({ queryKey: ['admin-new-tattoos'] });
-            toast.success(`Pomyślnie wygenerowano ${data.count} nowych kodów!`);
-            form.reset();
-        },
-        onError: () => toast.error('Wystąpił błąd podczas generowania kodów.'),
-    });
-
     function onSubmit(values: FormValues) {
         mutation.mutate(values.count);
     }
@@ -85,10 +71,8 @@ export default function AdminTattoosPage() {
             toast.warning('Brak kodów do wyeksportowania.');
             return;
         }
-
         const dataToExport = newTattoos.map(t => ({ 'Kod Tatuażu': t.unique_code }));
         const csv = Papa.unparse(dataToExport);
-
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
         const url = URL.createObjectURL(blob);
@@ -98,6 +82,7 @@ export default function AdminTattoosPage() {
         link.click();
         document.body.removeChild(link);
     };
+
     return (
         <div className="p-10 space-y-8">
             <div>
@@ -108,7 +93,7 @@ export default function AdminTattoosPage() {
             <Card>
                 <CardHeader>
                     <CardTitle>Wygeneruj nowe kody tatuaży</CardTitle>
-                    <CardDescription>Podaj liczbę unikalnych kodów, które chcesz dodać do systemu. Będą one miały format ZAP-XXXX-XXXX.</CardDescription>
+                    <CardDescription>Podaj liczbę unikalnych kodów, które chcesz dodać do systemu.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <Form {...form}>
@@ -147,24 +132,30 @@ export default function AdminTattoosPage() {
                 </CardHeader>
                 <CardContent>
                     <Table>
-                        <TableHeader><TableRow><TableHead>Kod Tatuażu</TableHead><TableHead>Data Wygenerowania</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {isLoadingNew && <TableRow><TableCell colSpan={2} className="text-center">Ładowanie...</TableCell></TableRow>}
-                            {newTattoos?.map((tattoo) => (
-                                <TableRow key={tattoo.id}>
-                                    <TableCell className="font-mono">{tattoo.unique_code}</TableCell>
-                                    <TableCell>{new Date(tattoo.created_at).toLocaleString('pl-PL')}</TableCell>
-                                </TableRow>
-                            ))}
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>Kod Tatuażu</TableHead>
+                                <TableHead>Data Wygenerowania</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>{
+                            isLoadingNew ? (
+                                <TableRow><TableCell colSpan={2} className="text-center">Ładowanie...</TableCell></TableRow>
+                            ) : (
+                                newTattoos?.map((tattoo) => (
+                                    <TableRow key={tattoo.id}>
+                                        <TableCell className="font-mono">{tattoo.unique_code}</TableCell>
+                                        <TableCell>{new Date(tattoo.created_at).toLocaleString('pl-PL')}</TableCell>
+                                    </TableRow>
+                                ))
+                            )}
                         </TableBody>
                     </Table>
                 </CardContent>
             </Card>
 
             <Card>
-                <CardHeader>
-                    <CardTitle>Aktywne Przypisania Tatuaży ({assignments?.length || 0})</CardTitle>
-                </CardHeader>
+                <CardHeader><CardTitle>Aktywne Przypisania Tatuaży ({assignments?.length || 0})</CardTitle></CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
@@ -175,7 +166,6 @@ export default function AdminTattoosPage() {
                                 <TableHead className="text-right">Akcje</TableHead>
                             </TableRow>
                         </TableHeader>
-                        {/* POPRAWKA: Usunięto białe znaki i komentarze stąd */}
                         <TableBody>{
                             isLoadingAssignments ? (
                                 <TableRow><TableCell colSpan={4} className="text-center">Ładowanie...</TableCell></TableRow>
