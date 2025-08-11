@@ -3,7 +3,7 @@ import { TattoosService } from './tattoos.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
-@Controller('tattoos')
+@Controller('api/tattoos')
 export class TattoosController {
     constructor(private readonly tattoosService: TattoosService) {}
 

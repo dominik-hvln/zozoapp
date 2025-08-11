@@ -1,0 +1,27 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/src/main.ts",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["../prisma/schema.prisma"]
+      }
+    },
+    {
+      "src": "frontend/package.json",
+      "use": "@vercel/next",
+      "config": {}
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "backend/src/main.ts"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "frontend/$1"
+    }
+  ]
+}
