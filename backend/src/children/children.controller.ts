@@ -3,7 +3,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ChildrenService } from './children.service';
 
 @UseGuards(JwtAuthGuard)
-@Controller('api/children')
+@Controller('children')
 export class ChildrenController {
     constructor(private readonly childrenService: ChildrenService) {}
 

@@ -4,7 +4,7 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
     app.enableCors({
-        origin: 'https://zozoapp.vercel.app/', // <-- Wklej tutaj adres URL Twojego frontendu
+        origin: 'https://zozoapp.vercel.app/',
         methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
         credentials: true,
     });
