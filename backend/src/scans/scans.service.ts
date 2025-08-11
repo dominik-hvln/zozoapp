@@ -7,7 +7,7 @@ export class ScansService {
     constructor(
         private prisma: PrismaService,
         private mailService: MailService,
-        ) {}
+    ) {}
 
     async processScan(uniqueCode: string, ip: string, userAgent: string) {
         const assignment = await this.prisma.assignments.findFirst({
@@ -32,7 +32,7 @@ export class ScansService {
 
         const newScan = await this.prisma.scans.create({
             data: {
-                assignment_id: assignment.id, // Teraz to jest bezpieczne
+                assignment_id: assignment.id,
                 ip_address: ip,
                 user_agent: userAgent,
             },
