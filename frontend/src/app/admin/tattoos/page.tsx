@@ -31,7 +31,10 @@ const generateCodes = async (count: number) => (await api.post('/admin/tattoos/g
 const deactivateAssignment = async (id: string) => (await api.post(`/admin/assignments/${id}/deactivate`)).data;
 
 const FormSchema = z.object({
-    count: z.coerce.number().int().min(1, 'Musi być co najmniej 1').max(500, 'Maksymalnie 500 na raz'),
+    count: z.string()
+        .min(1, 'Pole jest wymagane.')
+        .transform(val => parseInt(val, 10))
+        .pipe(z.number().int().min(1, 'Musi być co najmniej 1').max(500, 'Maksymalnie 500 na raz')),
 });
 type FormValues = z.infer<typeof FormSchema>;
 
