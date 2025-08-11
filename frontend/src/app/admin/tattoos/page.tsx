@@ -95,7 +95,6 @@ export default function AdminTattoosPage() {
         link.click();
         document.body.removeChild(link);
     };
-
     return (
         <div className="p-10 space-y-8">
             <div>
