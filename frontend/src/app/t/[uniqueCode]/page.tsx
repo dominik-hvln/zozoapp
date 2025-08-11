@@ -10,21 +10,22 @@ interface ScanData {
     message: string | null;
 }
 
-// Funkcja do pobierania danych z API (bez zmian)
+// Funkcja do pobierania danych z API
 async function getScanData(uniqueCode: string): Promise<ScanData> {
-    const res = await fetch(`http://localhost:3001/scans/${uniqueCode}`, { cache: 'no-store' });
+    // Budujemy pełny URL do API
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/scans/${uniqueCode}`;
+    const res = await fetch(apiUrl, { cache: 'no-store' });
+
     if (!res.ok) {
         throw new Error('Nie udało się pobrać danych.');
     }
     return res.json();
 }
 
-// Główny komponent strony
-export default async function ScanPage({ params }: { params: Promise<{ uniqueCode: string }> }) {
-    const { uniqueCode } = await params;
-
+// Główny komponent strony jest KOMPONENTEM SERWEROWYM
+export default async function ScanPage({ params }: { params: { uniqueCode: string } }) {
     try {
-        const data = await getScanData(uniqueCode);
+        const data = await getScanData(params.uniqueCode);
 
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
@@ -48,7 +49,7 @@ export default async function ScanPage({ params }: { params: Promise<{ uniqueCod
                 </Card>
             </div>
         );
-    } catch {
+    } catch (error) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
                 <Card className="w-full max-w-md text-center">

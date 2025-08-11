@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/:path((?!api/).*)",
+      "destination": "/:path"
+    },
+    {
+      "source": "/api/:path*",
+      "destination": "https://zozoapp-backend.onrender.com/api/:path*"
+    }
+  ]
+}
