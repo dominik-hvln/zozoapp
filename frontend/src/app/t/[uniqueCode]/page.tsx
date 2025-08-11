@@ -78,7 +78,7 @@ export default function ScanPage({ params }: { params: { uniqueCode: string } })
                     <div className="border-t pt-4 space-y-3">
                         <div className="flex items-center justify-center gap-3"><User className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">{data.parentName}</span></div>
                         {data.parentPhone && <div className="flex items-center justify-center gap-3"><Phone className="h-5 w-5 text-muted-foreground" /><a href={`tel:${data.parentPhone}`} className="font-semibold text-blue-600 hover:underline">{data.parentPhone}</a></div>}
-                        {data.message && <div className="flex items-start text-left gap-3 pt-2 bg-gray-50 p-3 rounded-md"><MessageSquare className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" /><p className="text-sm italic">"{data.message}"</p></div>}
+                        {data.message && <div className="flex items-start text-left gap-3 pt-2 bg-gray-50 p-3 rounded-md"><MessageSquare className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" /><p className="text-sm italic">&quot;{data.message}&quot;</p></div>}
                     </div>
                     <div className="border-t pt-4 mt-4">
                         {locationStatus === 'pending' && <p className="text-sm text-muted-foreground flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin"/> Oczekiwanie na zgodę na lokalizację...</p>}
