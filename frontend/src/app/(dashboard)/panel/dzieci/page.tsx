@@ -10,7 +10,7 @@ import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -19,9 +19,8 @@ import { PlusCircle, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
 import StrawberryIcon from '@/assets/avatars/strawberry.svg';
+import Image from 'next/image';
 
-
-// --- TYPY I FUNKCJE API ---
 interface Child {
     id: string;
     name: string;
@@ -163,7 +162,7 @@ export default function DzieciPage() {
                                         <Avatar className="w-24 h-24 mx-auto mb-4">
                                             <AvatarImage src={child.avatar_url || undefined} alt={child.name} />
                                             <AvatarFallback className="bg-gray-100 flex items-center justify-center p-2">
-                                                <img src={FallbackIcon.src} alt="Owocowy awatar" className="w-full h-full" />
+                                                <Image src={FallbackIcon.src} alt="Owocowy awatar" width={64} height={64} />
                                             </AvatarFallback>
 
                                         </Avatar>

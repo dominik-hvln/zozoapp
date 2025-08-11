@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Users, Sticker, ShoppingCart, Settings, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { ShieldCheck } from 'lucide-react'; // Dodaj nową ikonę
 
 const links = [

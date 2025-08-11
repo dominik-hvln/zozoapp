@@ -22,7 +22,7 @@ const getTokenData = () => {
         try {
             const user = jwtDecode<UserPayload>(token);
             return { token, user };
-        } catch (error) {
+        } catch (_error) {
             return { token: null, user: null };
         }
     }

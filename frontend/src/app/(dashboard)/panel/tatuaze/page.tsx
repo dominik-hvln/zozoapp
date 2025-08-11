@@ -6,15 +6,11 @@ import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
-
-// Import komponentów
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CheckCircle, Sticker } from 'lucide-react';
 import { AktywneTatuaze } from '@/components/shared/AktywneTatuaze';
-
-// --- TYPY I FUNKCJE API (bez zmian) ---
 interface Child { id: string; name: string; }
 const getChildren = async (): Promise<Child[]> => (await api.get('/children')).data;
 interface ActivationPayload { uniqueCode: string; childId: string; }
@@ -37,7 +33,7 @@ export default function TatuazePage() {
         }
     }, [searchParams, router]);
 
-    const { data: children, isLoading: isLoadingChildren } = useQuery({ queryKey: ['children'], queryFn: getChildren });
+    const { data: children } = useQuery({ queryKey: ['children'], queryFn: getChildren });
 
     const mutation = useMutation({
         mutationFn: activateTattoo,
@@ -47,7 +43,7 @@ export default function TatuazePage() {
             setScannedCode(null);
             setSelectedChildId(null);
         },
-        onError: (error: any) => {
+        onError: (error: Error) => {
             const errorMessage = error.response?.data?.message || "Wystąpił nieznany błąd.";
             toast.error('Błąd aktywacji', { description: errorMessage });
         }
