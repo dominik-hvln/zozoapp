@@ -29,10 +29,10 @@ const createProduct = async (data: { name: string, description?: string, price: 
 const formSchema = z.object({
     name: z.string().min(3, { message: 'Nazwa musi mieć co najmniej 3 znaki.' }),
     description: z.string().optional(),
-    price: z.string()
-        .min(1, 'Cena jest wymagana.')
-        .transform(val => parseFloat(val))
-        .pipe(z.number().min(0, { message: 'Cena nie może być ujemna.' })),
+    price: z.preprocess(
+        (val) => parseFloat(String(val)),
+        z.number().min(0, { message: 'Cena nie może być ujemna.' })
+    ),
 });
 type FormValues = z.infer<typeof formSchema>;
 
@@ -41,7 +41,7 @@ export default function AdminProductsPage() {
     const queryClient = useQueryClient();
 
     const { data: products, isLoading } = useQuery({ queryKey: ['admin-products'], queryFn: getProducts });
-    const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { name: '', description: '', price: '0.00' } });
+    const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { name: '', description: '', price: 0.00 } });
 
     const mutation = useMutation({
         mutationFn: createProduct,
