@@ -2,20 +2,19 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
+// Import komponentów
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Label } from '@/components/ui/label';
 import { PlusCircle } from 'lucide-react';
 
+// --- TYPY I FUNKCJE API ---
 interface Product {
     id: string;
     name: string;
@@ -26,22 +25,13 @@ interface Product {
 const getProducts = async (): Promise<Product[]> => (await api.get('/admin/products')).data;
 const createProduct = async (data: { name: string, description?: string, price: number }) => (await api.post('/admin/products', data)).data;
 
-const formSchema = z.object({
-    name: z.string().min(3, { message: 'Nazwa musi mieć co najmniej 3 znaki.' }),
-    description: z.string().optional(),
-    price: z.preprocess(
-        (val) => parseFloat(String(val)),
-        z.number().min(0, { message: 'Cena nie może być ujemna.' })
-    ),
-});
-type FormValues = z.infer<typeof formSchema>;
-
+// --- KOMPONENT ---
 export default function AdminProductsPage() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [formData, setFormData] = useState({ name: '', description: '', price: '0.00' });
     const queryClient = useQueryClient();
 
     const { data: products, isLoading } = useQuery({ queryKey: ['admin-products'], queryFn: getProducts });
-    const form = useForm<FormValues>({ resolver: zodResolver(formSchema), defaultValues: { name: '', description: '', price: 0.00 } });
 
     const mutation = useMutation({
         mutationFn: createProduct,
@@ -49,15 +39,24 @@ export default function AdminProductsPage() {
             queryClient.invalidateQueries({ queryKey: ['admin-products'] });
             toast.success('Produkt został pomyślnie dodany!');
             setIsDialogOpen(false);
-            form.reset();
+            setFormData({ name: '', description: '', price: '0.00' });
         },
         onError: () => toast.error('Wystąpił błąd podczas dodawania produktu.'),
     });
 
-    function onSubmit(values: FormValues) {
-        // Przesyłamy cenę w groszach
-        mutation.mutate({ ...values, price: Math.round(values.price * 100) });
-    }
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value });
+    };
+
+    const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        const priceInCents = Math.round(parseFloat(formData.price) * 100);
+        if (isNaN(priceInCents) || priceInCents < 0) {
+            toast.error('Nieprawidłowa cena.');
+            return;
+        }
+        mutation.mutate({ ...formData, price: priceInCents });
+    };
 
     return (
         <div className="p-10 space-y-6">
@@ -72,26 +71,26 @@ export default function AdminProductsPage() {
                     </DialogTrigger>
                     <DialogContent>
                         <DialogHeader><DialogTitle>Dodaj nowy produkt</DialogTitle></DialogHeader>
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
-                                <FormField control={form.control} name="name" render={({ field }) => (
-                                    <FormItem><FormLabel>Nazwa produktu</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name="description" render={({ field }) => (
-                                    <FormItem><FormLabel>Opis</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <FormField control={form.control} name="price" render={({ field }) => (
-                                    <FormItem><FormLabel>Cena (PLN)</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem>
-                                )} />
-                                <Button type="submit" disabled={mutation.isPending} className="w-full">
-                                    {mutation.isPending ? 'Dodawanie...' : 'Dodaj produkt'}
-                                </Button>
-                            </form>
-                        </Form>
+                        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Nazwa produktu</Label>
+                                <Input id="name" name="name" value={formData.name} onChange={handleInputChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="description">Opis</Label>
+                                <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="price">Cena (PLN)</Label>
+                                <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleInputChange} />
+                            </div>
+                            <Button type="submit" disabled={mutation.isPending} className="w-full">
+                                {mutation.isPending ? 'Dodawanie...' : 'Dodaj produkt'}
+                            </Button>
+                        </form>
                     </DialogContent>
                 </Dialog>
             </div>
-
             <div className="border rounded-lg">
                 <Table>
                     <TableHeader><TableRow><TableHead>Nazwa</TableHead><TableHead>Cena</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
