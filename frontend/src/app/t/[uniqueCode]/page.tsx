@@ -10,7 +10,6 @@ interface ScanData {
     message: string | null;
 }
 
-// Funkcja do pobierania danych z API (bez zmian)
 async function getScanData(uniqueCode: string): Promise<ScanData> {
     const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/scans/${uniqueCode}`;
     const res = await fetch(apiUrl, { cache: 'no-store' });
@@ -20,7 +19,6 @@ async function getScanData(uniqueCode: string): Promise<ScanData> {
     return res.json();
 }
 
-// Główny komponent strony
 export default async function ScanPage({ params }: { params: Promise<{ uniqueCode: string }> }) {
     const { uniqueCode } = await params;
 

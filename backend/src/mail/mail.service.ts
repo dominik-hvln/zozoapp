@@ -12,7 +12,7 @@ export class MailService {
     ) {
         try {
             await this.resend.emails.send({
-                from: 'ZozoApp <powiadomienia@twojadomena.com>', // WAŻNE: Użyj domeny zweryfikowanej w Resend
+                from: 'ZozoApp <onboarding@resend.dev>', // WAŻNE: Użyj domeny zweryfikowanej w Resend
                 to: parentEmail,
                 subject: `Ważny alert: Ktoś zeskanował tatuaż Twojego dziecka ${childName}!`,
                 html: `
