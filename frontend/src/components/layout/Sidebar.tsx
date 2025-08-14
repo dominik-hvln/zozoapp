@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Sticker, ShoppingCart, Settings, LogOut } from 'lucide-react';
+import { Home, Users, Sticker, ShoppingCart, Settings, Package, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { ShieldCheck } from 'lucide-react'; // Dodaj nową ikonę
 
@@ -72,7 +72,15 @@ export function Sidebar() {
                     >
                         <Sticker className="h-5 w-5"/>
                         Zarządzaj Tatuażami
-                    </Link></>
+                    </Link><Link
+                            href="/admin/produkty"
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${pathname.startsWith('/admin/produkty')
+                                ? 'bg-blue-100 text-blue-600'
+                                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
+                        >
+                            <Package className="h-5 w-5"/>
+                            Zarządzaj produktami
+                        </Link></>
                     </>
                 )}
             </nav>

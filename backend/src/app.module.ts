@@ -11,9 +11,11 @@ import { TattoosModule } from './tattoos/tattoos.module';
 import { ScansModule } from './scans/scans.module';
 import { MailModule } from './mail/mail.module';
 import { AdminModule } from './admin/admin.module';
+import { StoreModule } from './store/store.module';
+import { DashboardModule } from './dashboard/dashboard.module';
 
 @Module({
-  imports: [UsersModule, AuthModule, PrismaModule, ChildrenModule, TattoosModule, ScansModule, MailModule, AdminModule],
+  imports: [UsersModule, AuthModule, PrismaModule, ChildrenModule, TattoosModule, ScansModule, MailModule, AdminModule, StoreModule, DashboardModule],
   controllers: [AppController, ChildrenController],
   providers: [AppService, ChildrenService],
 })

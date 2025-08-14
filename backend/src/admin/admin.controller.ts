@@ -42,4 +42,14 @@ export class AdminController {
     getStats() {
         return this.adminService.getDashboardStats();
     }
+
+    @Get('products')
+    getProducts() {
+        return this.adminService.getAllProducts();
+    }
+
+    @Post('products')
+    createProduct(@Body() body: { name: string, description?: string, price: number }) {
+        return this.adminService.createProduct(body);
+    }
 }

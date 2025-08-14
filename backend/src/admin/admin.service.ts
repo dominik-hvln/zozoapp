@@ -130,4 +130,21 @@ export class AdminService {
             return assignment;
         });
     }
+
+    getAllProducts() {
+        return this.prisma.products.findMany({
+            orderBy: { created_at: 'desc' },
+        });
+    }
+
+    createProduct(data: { name: string, description?: string, price: number }) {
+        // W przyszłości tutaj będzie integracja ze Stripe do tworzenia produktu
+        return this.prisma.products.create({
+            data: {
+                name: data.name,
+                description: data.description,
+                price: data.price, // Oczekujemy ceny w groszach
+            },
+        });
+    }
 }
