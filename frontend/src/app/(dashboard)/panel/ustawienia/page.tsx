@@ -14,7 +14,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-// --- Schematy Walidacji ---
+// --- TYPY I SCHEMATY ---
+interface ProfileData {
+    first_name: string | null;
+    last_name: string | null;
+    phone: string | null;
+}
 const profileSchema = z.object({
     firstName: z.string().min(2, 'Imię jest wymagane.'),
     lastName: z.string().min(2, 'Nazwisko jest wymagane.'),
@@ -28,13 +33,13 @@ const passwordSchema = z.object({
 });
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
-// --- Funkcje API ---
+// --- FUNKCJE API ---
 const getProfile = async () => (await api.get('/profile/me')).data;
 const updateProfile = async (data: ProfileFormValues) => (await api.patch('/profile/me', data)).data;
 const changePassword = async (data: PasswordFormValues) => (await api.post('/profile/me/change-password', data)).data;
 
-// --- Komponenty Formularzy ---
-function ProfileForm({ profileData }: { profileData: any }) {
+// --- KOMPONENTY FORMULARZY ---
+function ProfileForm({ profileData }: { profileData: ProfileData | undefined }) {
     const queryClient = useQueryClient();
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),
@@ -92,7 +97,7 @@ function PasswordForm() {
     );
 }
 
-// --- Główny Komponent Strony ---
+// --- GŁÓWNY KOMPONENT STRONY ---
 export default function UstawieniaPage() {
     const { data: profile, isLoading } = useQuery({ queryKey: ['profile'], queryFn: getProfile });
 
