@@ -27,7 +27,7 @@ export class StoreService {
     // Nowa metoda do tworzenia sesji subskrypcji
     async createSubscriptionCheckoutSession(userId: string) {
         return this.stripe.checkout.sessions.create({
-            payment_method_types: ['card', 'p24', 'blik'],
+            payment_method_types: ['card'],
             mode: 'subscription',
             client_reference_id: userId,
             line_items: [
