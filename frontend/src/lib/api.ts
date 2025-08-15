@@ -5,7 +5,6 @@ export const api = axios.create({
     baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001',
 });
 
-// Interceptor dołączający token (pozostaje bez zmian)
 api.interceptors.request.use(
     (config) => {
         const token = useAuthStore.getState().token;
