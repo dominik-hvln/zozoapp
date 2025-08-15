@@ -40,14 +40,14 @@ export class ScansService {
 
         this.mailService.sendScanNotification(
             assignment.users.email,
-            assignment.users.name ?? 'Opiekunie',
+            assignment.users.first_name ?? 'Opiekunie',
             assignment.children.name,
         );
 
         return {
             scanId: newScan.id,
             childName: assignment.children.name,
-            parentName: assignment.users.name,
+            parentName: assignment.users.first_name,
             parentPhone: assignment.users.phone,
             message: assignment.custom_message,
         };

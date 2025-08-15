@@ -6,6 +6,7 @@ interface UserPayload {
     sub: string;
     email: string;
     role: 'USER' | 'ADMIN';
+    status: 'TRIAL' | 'ACTIVE' | 'BLOCKED';
 }
 
 interface AuthState {

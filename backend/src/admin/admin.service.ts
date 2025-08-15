@@ -9,18 +9,16 @@ export class AdminService {
 
     getAllUsers() {
         return this.prisma.users.findMany({
-            select: { id: true, email: true, name: true, role: true, created_at: true },
+            select: { id: true, email: true, first_name: true, role: true, created_at: true },
         });
     }
 
     async generateAndStoreRandomCodes(count: number) {
         const codesToInsert: Prisma.tattoo_instancesCreateManyInput[] = [];
-
         for (let i = 0; i < count; i++) {
             const uuid = randomUUID();
             const parts = uuid.split('-');
             const friendlyCode = `ZAP-${parts[1].toUpperCase()}-${parts[3].toUpperCase()}`;
-
             codesToInsert.push({ unique_code: friendlyCode });
         }
 
@@ -49,53 +47,14 @@ export class AdminService {
         });
     }
 
-    async getDashboardStats() {
-        const usersCount = await this.prisma.users.count();
-        const childrenCount = await this.prisma.children.count();
-        const newTattoosCount = await this.prisma.tattoo_instances.count({
-            where: { status: 'new' },
-        });
-        const activeTattoosCount = await this.prisma.tattoo_instances.count({
-            where: { status: 'active' },
-        });
-
-        // Prosta agregacja użytkowników z ostatnich 7 dni (dla wykresu)
-        const sevenDaysAgo = new Date();
-        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-        const newUsersLast7Days = await this.prisma.users.groupBy({
-            by: ['created_at'],
-            where: {
-                created_at: {
-                    gte: sevenDaysAgo,
-                },
-            },
-            _count: {
-                id: true,
-            },
-        });
-
-        // Formatujemy dane dla wykresu
-        const chartData = newUsersLast7Days.map(day => ({
-            date: new Date(day.created_at).toISOString().split('T')[0],
-            count: day._count.id
-        }));
-
-        return {
-            usersCount,
-            childrenCount,
-            newTattoosCount,
-            activeTattoosCount,
-            chartData,
-        };
-    }
-
     async getUserDetails(userId: string) {
         const user = await this.prisma.users.findUnique({
             where: { id: userId },
             select: {
                 id: true,
                 email: true,
-                name: true,
+                first_name: true,
+                last_name: true,
                 role: true,
                 created_at: true,
                 phone: true,
@@ -131,6 +90,44 @@ export class AdminService {
         });
     }
 
+    async getDashboardStats() {
+        const usersCount = await this.prisma.users.count();
+        const childrenCount = await this.prisma.children.count();
+        const newTattoosCount = await this.prisma.tattoo_instances.count({
+            where: { status: 'new' },
+        });
+        const activeTattoosCount = await this.prisma.tattoo_instances.count({
+            where: { status: 'active' },
+        });
+
+        const sevenDaysAgo = new Date();
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+        const newUsersLast7Days = await this.prisma.users.groupBy({
+            by: ['created_at'],
+            where: {
+                created_at: {
+                    gte: sevenDaysAgo,
+                },
+            },
+            _count: {
+                id: true,
+            },
+        });
+
+        const chartData = newUsersLast7Days.map(day => ({
+            date: new Date(day.created_at).toISOString().split('T')[0],
+            count: day._count.id
+        }));
+
+        return {
+            usersCount,
+            childrenCount,
+            newTattoosCount,
+            activeTattoosCount,
+            chartData,
+        };
+    }
+
     getAllProducts() {
         return this.prisma.products.findMany({
             orderBy: { created_at: 'desc' },
@@ -138,12 +135,11 @@ export class AdminService {
     }
 
     createProduct(data: { name: string, description?: string, price: number }) {
-        // W przyszłości tutaj będzie integracja ze Stripe do tworzenia produktu
         return this.prisma.products.create({
             data: {
                 name: data.name,
                 description: data.description,
-                price: data.price, // Oczekujemy ceny w groszach
+                price: data.price,
             },
         });
     }

@@ -3,23 +3,46 @@ import { UsersService } from 'src/users/users.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { JwtService } from '@nestjs/jwt';
+import { MailService } from 'src/mail/mail.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
     constructor(
         private usersService: UsersService,
         private jwtService: JwtService,
+        private mailService: MailService,
+        private configService: ConfigService,
     ) {}
 
     async register(dto: RegisterDto) {
         const hashedPassword = await bcrypt.hash(dto.password, 10);
-        const userData = {
-            ...dto,
-            password: hashedPassword,
+        const { password, ...submissionData } = dto;
+
+        const newUser = await this.usersService.create({
+            ...submissionData,
+            password_hash: hashedPassword,
+        });
+
+        try {
+            await this.mailService.sendWelcomeEmail(newUser.email, newUser.first_name ?? 'Nowy Użytkowniku');
+        } catch (emailError) {
+            console.error('Błąd wysyłki e-maila powitalnego (użytkownik został utworzony):', emailError);
+        }
+
+        const secret = this.configService.get<string>('JWT_SECRET');
+        console.log('SECRET KEY CHECK:', secret ? `Secret o długości ${secret.length} został znaleziony.` : '!!! SEKRET JEST PUSTY LUB NIEZNALEZIONY !!!');
+
+        const payload = {
+            sub: newUser.id,
+            email: newUser.email,
+            role: newUser.role,
+            status: newUser.account_status
         };
-        const newUser = await this.usersService.create(userData);
-        const { password_hash, ...userWithoutPassword } = newUser;
-        return userWithoutPassword;
+        const accessToken = await this.jwtService.signAsync(payload);
+        return {
+            access_token: accessToken,
+        };
     }
 
     async login(dto: { email: string; pass: string }) {
@@ -36,7 +59,8 @@ export class AuthService {
         const payload = {
             sub: user.id,
             email: user.email,
-            role: user.role
+            role: user.role,
+            status: user.account_status
         };
         const accessToken = await this.jwtService.signAsync(payload);
 
