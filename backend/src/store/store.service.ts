@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import Stripe from 'stripe';
 
@@ -25,12 +25,20 @@ export class StoreService {
     }
 
     async createSubscriptionCheckoutSession(userId: string) {
+        const user = await this.prisma.users.findUnique({
+            where: { id: userId },
+            select: { email: true },
+        });
+        if (!user) {
+            throw new NotFoundException('Użytkownik nie został znaleziony.');
+        }
         try {
             const session = await this.stripe.checkout.sessions.create({
                 ui_mode: 'hosted',
                 payment_method_collection: 'if_required',
                 mode: 'subscription',
                 client_reference_id: userId,
+                customer_email: user.email,
                 line_items: [{
                     price: 'price_1RwJhZLpI3RKz2R39q16HoQU',
                     quantity: 1,
