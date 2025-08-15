@@ -4,9 +4,12 @@ import { Sidebar } from '@/components/layout/Sidebar';
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Menu } from 'lucide-react';
+import { useMutation } from '@tanstack/react-query';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
 
 export default function DashboardLayout({
                                             children,
@@ -26,6 +29,17 @@ export default function DashboardLayout({
             router.push('/login');
         }
     }, [token, router, isClient]);
+
+    // NOWA LOGIKA: Mutacja do tworzenia sesji płatności
+    const checkoutMutation = useMutation({
+        mutationFn: () => api.post('/store/checkout/subscription'),
+        onSuccess: (response) => {
+            window.location.href = response.data.url;
+        },
+        onError: () => {
+            toast.error('Wystąpił błąd', { description: 'Nie udało się rozpocząć procesu płatności. Spróbuj ponownie.' });
+        },
+    });
 
     if (!isClient || !token) {
         return (
@@ -49,13 +63,10 @@ export default function DashboardLayout({
                         <SheetTrigger asChild>
                             <Button variant="outline" size="icon" className="shrink-0">
                                 <Menu className="h-5 w-5" />
-                                <span className="sr-only">Toggle navigation menu</span>
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="left" className="flex flex-col p-0 w-64">
-                            <SheetHeader className='sr-only'>
-                                <SheetTitle>Menu Główne</SheetTitle>
-                            </SheetHeader>
+                            <SheetHeader className='sr-only'><SheetTitle>Menu Główne</SheetTitle></SheetHeader>
                             <Sidebar />
                         </SheetContent>
                     </Sheet>
@@ -63,13 +74,19 @@ export default function DashboardLayout({
                 </header>
 
                 <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative">
-                    {/* Warstwa "wyszarzająca" dla zablokowanych kont */}
                     {isAccountBlocked && (
                         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
                             <div className="text-center p-6 border rounded-lg bg-white shadow-xl max-w-sm">
                                 <h2 className="text-xl font-bold">Twoje konto wygasło</h2>
                                 <p className="text-muted-foreground mt-2">Wykup subskrypcję, aby odblokować pełen dostęp.</p>
-                                <Button className="mt-4">Wykup Subskrypcję</Button>
+                                {/* OŻYWIONY PRZYCISK */}
+                                <Button
+                                    onClick={() => checkoutMutation.mutate()}
+                                    disabled={checkoutMutation.isPending}
+                                    className="mt-4"
+                                >
+                                    {checkoutMutation.isPending ? 'Przetwarzanie...' : 'Wykup Subskrypcję'}
+                                </Button>
                             </div>
                         </div>
                     )}

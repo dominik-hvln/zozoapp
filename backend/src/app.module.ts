@@ -15,9 +15,10 @@ import { StoreModule } from './store/store.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProfileModule } from './profile/profile.module';
+import { WebhooksModule } from './webhooks/webhooks.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule, PrismaModule, ChildrenModule, TattoosModule, ScansModule, MailModule, AdminModule, StoreModule, DashboardModule, ProfileModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule, PrismaModule, ChildrenModule, TattoosModule, ScansModule, MailModule, AdminModule, StoreModule, DashboardModule, ProfileModule, WebhooksModule],
   controllers: [AppController, ChildrenController],
   providers: [AppService, ChildrenService],
 })
