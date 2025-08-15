@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, PartyPopper, XCircle } from 'lucide-react';
+import { Menu, PartyPopper, XCircle, Loader2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
