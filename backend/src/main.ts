@@ -5,7 +5,6 @@ import { json } from 'express';
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
-    app.setGlobalPrefix('api');
     app.use(json({
         verify: (req: any, res, buf) => {
             req.rawBody = buf;
