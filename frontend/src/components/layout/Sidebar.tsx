@@ -17,9 +17,10 @@ const bottomLinks = [
     { href: '/panel/ustawienia', label: 'Ustawienia', icon: Settings },
 ]
 
-export function Sidebar() {
+export function Sidebar({ onLogout }: { onLogout?: () => void }) {
     const pathname = usePathname();
-    const { logout, user } = useAuthStore();
+    const { user, logout } = useAuthStore();
+    const handleLogout = onLogout || logout;
 
     return (
         <aside className="flex-shrink-0 border-r bg-gray-50 flex flex-col">
@@ -108,7 +109,7 @@ export function Sidebar() {
                         Ustawienia
                     </Link>
                     <button
-                        onClick={logout}
+                        onClick={handleLogout}
                         className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-primary/5 hover:text-primary w-full"
                     >
                         <LogOut className="h-5 w-5" />

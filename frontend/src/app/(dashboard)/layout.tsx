@@ -15,17 +15,15 @@ function PaymentStatus() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const status = searchParams.get('payment');
+    const { logout } = useAuthStore();
 
     useEffect(() => {
         if (status === 'success') {
             toast.success('Płatność zakończona pomyślnie!', {
-                description: 'Dziękujemy! Twoje konto jest ponownie aktywne. Odświeżanie...',
-                icon: <PartyPopper className="h-5 w-5 text-green-500" />,
+                description: 'Twoje konto jest aktywne. Zaloguj się ponownie, aby kontynuować.',
             });
-            setTimeout(() => {
-                // Wymuszamy twarde przeładowanie strony, aby odświeżyć token i status
-                window.location.href = '/panel';
-            }, 2000);
+            logout();
+            window.location.href = '/login';
         }
         if (status === 'cancel') {
             toast.error('Płatność anulowana', {
@@ -34,14 +32,14 @@ function PaymentStatus() {
             });
             router.replace('/panel');
         }
-    }, [status, router]);
+    }, [status, logout]);
 
     return null;
 }
 
 
 export default function DashboardLayout({ children }: { children: React.ReactNode; }) {
-    const { token, user } = useAuthStore();
+    const { token, user, logout } = useAuthStore();
     const router = useRouter();
     const [isClient, setIsClient] = useState(false);
 
@@ -71,7 +69,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <PaymentStatus /> {/* Dodajemy komponent obsługi płatności */}
             <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
                 <div className={`hidden border-r bg-muted/40 md:block`}>
-                    <Sidebar />
+                    <Sidebar onLogout={logout} />
                 </div>
 
                 <div className="flex flex-col">
