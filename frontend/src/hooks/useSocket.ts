@@ -2,6 +2,8 @@
 import { useEffect } from 'react';
 import { io } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth.store';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
 
 const socket = io(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001');
 
@@ -10,9 +12,6 @@ export const useSocket = () => {
 
     useEffect(() => {
         if (user) {
-            // Dołącz do swojego prywatnego "pokoju" na serwerze
-            socket.emit('joinRoom', user.sub);
-
             socket.on('accountStatusChanged', (data) => {
                 console.log('Otrzymano aktualizację statusu:', data);
                 api.post('/auth/refresh').then(response => {
@@ -24,7 +23,6 @@ export const useSocket = () => {
 
         return () => {
             if (user) {
-                socket.emit('leaveRoom', user.sub);
                 socket.off('accountStatusChanged');
             }
         };
