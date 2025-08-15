@@ -15,50 +15,23 @@ function PaymentStatus() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const status = searchParams.get('payment');
-    const { setToken } = useAuthStore.getState();
-
-    const refreshMutation = useMutation({
-        mutationFn: () => api.post('/auth/refresh'),
-        onSuccess: (response) => {
-            const { access_token } = response.data;
-            setToken(access_token); // Podmieniamy token na nowy
-            toast.success('Płatność zakończona pomyślnie!', {
-                description: 'Dziękujemy! Twoje konto jest ponownie aktywne.',
-            });
-            router.replace('/panel'); // Czyścimy URL
-        },
-        onError: () => {
-            // Jeśli odświeżenie zawiedzie, wracamy do metody z wylogowaniem
-            window.location.href = '/login';
-        }
-    });
 
     useEffect(() => {
         if (status === 'success') {
             toast.success('Płatność zakończona pomyślnie!', {
-                description: 'Twoje konto jest aktywne. Zaloguj się ponownie, aby kontynuować.',
+                description: 'Dziękujemy! Twoje konto jest ponownie aktywne. Odświeżanie...',
             });
-            refreshMutation.mutate();
+            // Czekamy 2 sekundy, aby użytkownik zobaczył powiadomienie
+            setTimeout(() => {
+                // Wymuszamy pełne przeładowanie strony na czysty URL
+                window.location.href = '/panel';
+            }, 2000);
         }
         if (status === 'cancel') {
-            toast.error('Płatność anulowana', {
-                description: 'Wróciłeś do panelu bez ukończenia transakcji.',
-                icon: <XCircle className="h-5 w-5 text-red-500" />,
-            });
-            router.replace('/panel');
+            toast.error('Płatność anulowana');
+            router.replace('/panel'); // Czyścimy URL bez przeładowania
         }
     }, [status, router]);
-
-    if (refreshMutation.isPending) {
-        return (
-            <div className="fixed inset-0 bg-white/80 z-50 flex items-center justify-center">
-                <div className="text-center">
-                    <p className="font-semibold">Finalizowanie płatności...</p>
-                    <p className="text-sm text-muted-foreground">Proszę czekać, odświeżamy Twoją sesję.</p>
-                </div>
-            </div>
-        );
-    }
 
     return null;
 }
