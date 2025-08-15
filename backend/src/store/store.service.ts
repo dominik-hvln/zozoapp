@@ -24,20 +24,26 @@ export class StoreService {
         });
     }
 
-    // Nowa metoda do tworzenia sesji subskrypcji
     async createSubscriptionCheckoutSession(userId: string) {
-        return this.stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            mode: 'subscription',
-            client_reference_id: userId,
-            line_items: [
-                {
+        try {
+            const session = await this.stripe.checkout.sessions.create({
+                ui_mode: 'hosted',
+                payment_method_collection: 'if_required',
+                invoice_creation: { enabled: true },
+
+                mode: 'subscription',
+                client_reference_id: userId,
+                line_items: [{
                     price: 'price_1RwJhZLpI3RKz2R39q16HoQU',
                     quantity: 1,
-                },
-            ],
-            success_url: `${process.env.FRONTEND_URL}/panel?payment=success`,
-            cancel_url: `${process.env.FRONTEND_URL}/panel`,
-        });
+                }],
+                success_url: `${process.env.FRONTEND_URL}/panel?payment=success`,
+                cancel_url: `${process.env.FRONTEND_URL}/panel`,
+            });
+            return session;
+        } catch (error) {
+            console.error("Błąd z API Stripe:", error.message);
+            throw new InternalServerErrorException(`Błąd Stripe: ${error.message}`);
+        }
     }
 }
