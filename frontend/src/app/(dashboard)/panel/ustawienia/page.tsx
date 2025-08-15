@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-// --- Schemat Walidacji Danych Osobowych ---
+// --- Schematy Walidacji ---
 const profileSchema = z.object({
     firstName: z.string().min(2, 'Imię jest wymagane.'),
     lastName: z.string().min(2, 'Nazwisko jest wymagane.'),
@@ -22,7 +22,6 @@ const profileSchema = z.object({
 });
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-// --- Schemat Walidacji Hasła ---
 const passwordSchema = z.object({
     oldPass: z.string().min(1, 'Stare hasło jest wymagane.'),
     newPass: z.string().min(8, 'Nowe hasło musi mieć co najmniej 8 znaków.'),
@@ -77,7 +76,7 @@ function PasswordForm() {
             toast.success('Hasło zostało zmienione!');
         },
         onError: (error: AxiosError) => {
-            const errorMessage = (error.response?.data as any)?.message || "Wystąpił nieznany błąd.";
+            const errorMessage = (error.response?.data as { message: string })?.message || "Wystąpił nieznany błąd.";
             toast.error('Błąd zmiany hasła', { description: errorMessage });
         },
     });

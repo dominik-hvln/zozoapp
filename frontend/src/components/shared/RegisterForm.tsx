@@ -8,7 +8,6 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/store/auth.store';
 import { AxiosError } from 'axios';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -50,10 +49,8 @@ export function RegisterForm() {
             router.push('/panel');
 
         } catch (error) {
-            // POPRAWIONA OBSŁUGA BŁĘDÓW
             let errorMessage = 'Wystąpił nieoczekiwany błąd.';
             if (error instanceof AxiosError && error.response) {
-                // Sprawdzamy, czy serwer zwrócił konkretną wiadomość
                 errorMessage = error.response.data.message || 'Błąd serwera.';
             }
             toast.error('Błąd rejestracji', { description: errorMessage });
