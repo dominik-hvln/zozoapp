@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Sticker, ShoppingCart, Settings, Package, LogOut } from 'lucide-react';
+import { Home, Users, Sticker, ShoppingCart, Settings, Package, LogOut, ShieldCheck } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
-import { ShieldCheck } from 'lucide-react'; // Dodaj nową ikonę
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const links = [
     { href: '/panel', label: 'Panel Główny', icon: Home },
