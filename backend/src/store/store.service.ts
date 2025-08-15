@@ -29,8 +29,6 @@ export class StoreService {
             const session = await this.stripe.checkout.sessions.create({
                 ui_mode: 'hosted',
                 payment_method_collection: 'if_required',
-                invoice_creation: { enabled: true },
-
                 mode: 'subscription',
                 client_reference_id: userId,
                 line_items: [{
