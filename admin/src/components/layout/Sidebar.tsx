@@ -7,9 +7,9 @@ import { useAuthStore } from '@/store/auth.store';
 
 const links = [
     { href: '/admin', label: 'Dashboard', icon: ShieldCheck },
-    { href: '/admin/users', label: 'Użytkownicy', icon: Users },
-    { href: '/admin/tattoos', label: 'Tatuaże', icon: Sticker },
-    { href: '/admin/produkty', label: 'Produkty', icon: Package },
+    { href: '/users', label: 'Użytkownicy', icon: Users },
+    { href: '/tattoos', label: 'Tatuaże', icon: Sticker },
+    { href: '/produkty', label: 'Produkty', icon: Package },
 ];
 
 export function Sidebar() {
