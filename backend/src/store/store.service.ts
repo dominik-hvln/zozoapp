@@ -32,7 +32,7 @@ export class StoreService {
             client_reference_id: userId,
             line_items: [
                 {
-                    price: 'prod_Ss3pNCRNl7mlPX',
+                    price: 'price_1RwJhZLpI3RKz2R39q16HoQU',
                     quantity: 1,
                 },
             ],
