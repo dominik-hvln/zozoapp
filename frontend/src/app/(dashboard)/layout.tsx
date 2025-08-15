@@ -25,11 +25,13 @@ function PaymentStatus() {
             setToken(access_token); // Podmieniamy token na nowy
             toast.success('Płatność zakończona pomyślnie!', {
                 description: 'Dziękujemy! Twoje konto jest ponownie aktywne.',
+                icon: <PartyPopper className="h-5 w-5 text-green-500" />
             });
             router.replace('/panel');
         },
         onError: () => {
-            window.location.href = '/login';
+            toast.error("Wystąpił błąd sesji", { description: "Proszę, zaloguj się ponownie."});
+            setTimeout(() => { window.location.href = '/login'; }, 2000);
         }
     });
 
@@ -38,15 +40,16 @@ function PaymentStatus() {
             refreshMutation.mutate();
         }
         if (status === 'cancel') {
-            toast.error('Płatność anulowana');
+            toast.error('Płatność anulowana', { icon: <XCircle className="h-5 w-5 text-red-500" /> });
             router.replace('/panel');
         }
-    }, [status]);
+    }, [status, router]);
 
     if (refreshMutation.isPending) {
         return (
             <div className="fixed inset-0 bg-white/80 z-50 flex items-center justify-center">
-                <div className="text-center">
+                <div className="text-center p-4 bg-white rounded-lg shadow-lg">
+                    <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
                     <p className="font-semibold">Finalizowanie płatności...</p>
                     <p className="text-sm text-muted-foreground">Proszę czekać, odświeżamy Twoją sesję.</p>
                 </div>
@@ -62,6 +65,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const { token, user, logout } = useAuthStore();
     const router = useRouter();
     const [isClient, setIsClient] = useState(false);
+
+    useSocket();
 
     useEffect(() => { setIsClient(true); }, []);
     useEffect(() => {
@@ -83,7 +88,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     const isAccountBlocked = user?.status === 'BLOCKED';
-    useSocket();
     return (
         <>
             <PaymentStatus /> {/* Dodajemy komponent obsługi płatności */}
