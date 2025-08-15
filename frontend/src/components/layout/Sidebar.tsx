@@ -86,27 +86,30 @@ export function Sidebar() {
             </nav>
 
             <div className="p-4 mt-auto border-t">
+                <div className="flex items-center gap-3 mb-4">
+                    <Avatar className="h-9 w-9">
+                        <AvatarImage src="" /> {/* Można dodać link do avatara usera */}
+                        <AvatarFallback>{user?.email.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                        <p className="text-sm font-medium truncate">{user?.email}</p>
+                    </div>
+                </div>
                 <nav className="flex flex-col space-y-1">
-                    {bottomLinks.map((link) => {
-                        const Icon = link.icon;
-                        return (
-                            <Link
-                                key={link.href}
-                                href={link.href}
-                                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                                    pathname === link.href
-                                        ? 'bg-blue-100 text-blue-600'
-                                        : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
-                                }`}
-                            >
-                                <Icon className="h-5 w-5" />
-                                {link.label}
-                            </Link>
-                        );
-                    })}
+                    <Link
+                        href="/panel/ustawienia"
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                            pathname === '/panel/ustawienia'
+                                ? 'bg-primary/10 text-primary'
+                                : 'text-muted-foreground hover:bg-primary/5 hover:text-primary'
+                        }`}
+                    >
+                        <Settings className="h-5 w-5" />
+                        Ustawienia
+                    </Link>
                     <button
                         onClick={logout}
-                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-gray-600 hover:bg-gray-100 hover:text-gray-900 w-full"
+                        className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors text-muted-foreground hover:bg-primary/5 hover:text-primary w-full"
                     >
                         <LogOut className="h-5 w-5" />
                         Wyloguj się
