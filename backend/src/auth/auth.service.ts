@@ -68,4 +68,23 @@ export class AuthService {
             access_token: accessToken,
         };
     }
+
+    async refreshSession(userId: string) {
+        const user = await this.usersService.findById(userId);
+        if (!user) {
+            throw new UnauthorizedException();
+        }
+
+        const payload = {
+            sub: user.id,
+            email: user.email,
+            role: user.role,
+            status: user.account_status,
+        };
+        const accessToken = await this.jwtService.signAsync(payload);
+
+        return {
+            access_token: accessToken,
+        };
+    }
 }

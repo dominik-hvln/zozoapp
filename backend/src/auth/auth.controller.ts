@@ -23,4 +23,10 @@ export class AuthController {
     getProfile(@Request() req) {
         return req.user;
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('refresh')
+    refreshSession(@Request() req) {
+        return this.authService.refreshSession(req.user.userId);
+    }
 }
