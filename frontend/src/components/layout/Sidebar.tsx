@@ -22,7 +22,7 @@ export function Sidebar() {
     const { logout, user } = useAuthStore();
 
     return (
-        <aside className="w-64 flex-shrink-0 border-r bg-gray-50 flex flex-col">
+        <aside className="flex-shrink-0 border-r bg-gray-50 flex flex-col">
             <div className="p-4 border-b">
                 <Link href="/panel" className="text-2xl font-bold tracking-tighter text-gray-900">
                     ZozoApp

@@ -19,12 +19,12 @@ function PaymentStatus() {
     useEffect(() => {
         if (status === 'success') {
             toast.success('Płatność zakończona pomyślnie!', {
-                description: 'Dziękujemy! Twoje konto jest ponownie aktywne.',
+                description: 'Dziękujemy! Twoje konto jest ponownie aktywne. Odświeżanie...',
                 icon: <PartyPopper className="h-5 w-5 text-green-500" />,
             });
             setTimeout(() => {
-                router.replace('/panel');
-                window.location.reload();
+                // Wymuszamy twarde przeładowanie strony, aby odświeżyć token i status
+                window.location.href = '/panel';
             }, 2000);
         }
         if (status === 'cancel') {
@@ -70,7 +70,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <>
             <PaymentStatus /> {/* Dodajemy komponent obsługi płatności */}
             <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-                <div className={`hidden border-r bg-muted/40 md:block ${isAccountBlocked ? 'pointer-events-none' : ''}`}>
+                <div className={`hidden border-r bg-muted/40 md:block`}>
                     <Sidebar />
                 </div>
 
