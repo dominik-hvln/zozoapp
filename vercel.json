@@ -3,30 +3,33 @@
   "builds": [
     {
       "src": "backend/package.json",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["dist/**", "prisma/**"]
-      }
+      "use": "@vercel/node"
     },
     {
       "src": "frontend/package.json",
-      "use": "@vercel/next",
-      "outputDirectory": "frontend"
+      "use": "@vercel/next"
     },
     {
       "src": "admin/package.json",
-      "use": "@vercel/next",
-      "outputDirectory": "admin"
+      "use": "@vercel/next"
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/admin/(.*)",
-      "dest": "/admin/$1"
+      "source": "/api/:path*",
+      "destination": "/backend"
     },
     {
-      "src": "/(.*)",
-      "dest": "/frontend/$1"
+      "source": "/admin/:path*",
+      "destination": "/admin"
+    },
+    {
+      "source": "/admin",
+      "destination": "/admin"
+    },
+    {
+      "source": "/:path*",
+      "destination": "/frontend"
     }
   ]
 }
