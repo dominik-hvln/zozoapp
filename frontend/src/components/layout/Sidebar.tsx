@@ -48,42 +48,6 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
                         </Link>
                     );
                 })}
-                {user?.role === 'ADMIN' && (
-                    <><Link
-                        href="/admin"
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mt-4 border-t ${pathname.startsWith('/admin') // Ta logika pozostaje bez zmian
-                            ? 'bg-blue-100 text-blue-600'
-                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
-                    >
-                        <ShieldCheck className="h-5 w-5"/>
-                        Panel Admina
-                    </Link><><Link
-                        href="/admin/users"
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${pathname.startsWith('/admin/users')
-                            ? 'bg-blue-100 text-blue-600'
-                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
-                    >
-                        <ShieldCheck className="h-5 w-5"/>
-                        Użytkownicy
-                    </Link><Link
-                        href="/admin/tattoos"
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${pathname.startsWith('/admin/tattoos')
-                            ? 'bg-blue-100 text-blue-600'
-                            : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
-                    >
-                        <Sticker className="h-5 w-5"/>
-                        Zarządzaj Tatuażami
-                    </Link><Link
-                            href="/admin/produkty"
-                            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${pathname.startsWith('/admin/produkty')
-                                ? 'bg-blue-100 text-blue-600'
-                                : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'}`}
-                        >
-                            <Package className="h-5 w-5"/>
-                            Zarządzaj produktami
-                        </Link></>
-                    </>
-                )}
             </nav>
 
             <div className="p-4 mt-auto border-t">
