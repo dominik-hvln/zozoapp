@@ -14,7 +14,7 @@ const links = [
 ];
 
 const bottomLinks = [
-    { href: '/ustawienia', label: 'Ustawienia', icon: Settings },
+    { href: '/panel/ustawienia', label: 'Ustawienia', icon: Settings },
 ]
 
 export function Sidebar() {
