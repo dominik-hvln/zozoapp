@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, UserPlus, Sticker, Warehouse } from 'lucide-react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 
-// --- TYPY I FUNKCJE API ---
 interface Stats {
     usersCount: number;
     childrenCount: number;
