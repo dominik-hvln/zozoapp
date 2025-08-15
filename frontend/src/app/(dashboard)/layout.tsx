@@ -10,28 +10,49 @@ import { Menu, PartyPopper, XCircle } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { useSocket } from '@/hooks/useSocket';
 
 function PaymentStatus() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const status = searchParams.get('payment');
+    const { setToken } = useAuthStore.getState();
+
+    const refreshMutation = useMutation({
+        mutationFn: () => api.post('/auth/refresh'),
+        onSuccess: (response) => {
+            const { access_token } = response.data;
+            setToken(access_token); // Podmieniamy token na nowy
+            toast.success('Płatność zakończona pomyślnie!', {
+                description: 'Dziękujemy! Twoje konto jest ponownie aktywne.',
+            });
+            router.replace('/panel');
+        },
+        onError: () => {
+            window.location.href = '/login';
+        }
+    });
 
     useEffect(() => {
         if (status === 'success') {
-            toast.success('Płatność zakończona pomyślnie!', {
-                description: 'Dziękujemy! Twoje konto jest ponownie aktywne. Odświeżanie...',
-            });
-            // Czekamy 2 sekundy, aby użytkownik zobaczył powiadomienie
-            setTimeout(() => {
-                // Wymuszamy pełne przeładowanie strony na czysty URL
-                window.location.href = '/panel';
-            }, 2000);
+            refreshMutation.mutate();
         }
         if (status === 'cancel') {
             toast.error('Płatność anulowana');
-            router.replace('/panel'); // Czyścimy URL bez przeładowania
+            router.replace('/panel');
         }
-    }, [status, router]);
+    }, [status]);
+
+    if (refreshMutation.isPending) {
+        return (
+            <div className="fixed inset-0 bg-white/80 z-50 flex items-center justify-center">
+                <div className="text-center">
+                    <p className="font-semibold">Finalizowanie płatności...</p>
+                    <p className="text-sm text-muted-foreground">Proszę czekać, odświeżamy Twoją sesję.</p>
+                </div>
+            </div>
+        );
+    }
 
     return null;
 }
@@ -62,7 +83,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     const isAccountBlocked = user?.status === 'BLOCKED';
-
+    useSocket();
     return (
         <>
             <PaymentStatus /> {/* Dodajemy komponent obsługi płatności */}

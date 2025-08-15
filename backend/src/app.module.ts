@@ -16,9 +16,10 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { ConfigModule } from '@nestjs/config';
 import { ProfileModule } from './profile/profile.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
+import { EventsModule } from './events/events.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule, PrismaModule, ChildrenModule, TattoosModule, ScansModule, MailModule, AdminModule, StoreModule, DashboardModule, ProfileModule, WebhooksModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule, PrismaModule, ChildrenModule, TattoosModule, ScansModule, MailModule, AdminModule, StoreModule, DashboardModule, ProfileModule, WebhooksModule, EventsModule],
   controllers: [AppController, ChildrenController],
   providers: [AppService, ChildrenService],
 })
