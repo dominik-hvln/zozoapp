@@ -59,8 +59,8 @@ function ActivitiesBlock({ activities = [], onActivityClick }: { activities?: Sc
                     {activities.map((scan) => (
                         <li key={scan.id} className="flex items-start text-sm p-2 -mx-2 rounded-md hover:bg-gray-100 cursor-pointer" onClick={() => onActivityClick(scan)}>
                             <div className="flex-1">
-                                <p className="font-semibold">{scan.assignments?.child?.name || 'Brak danych'}</p>
-                                <p className="text-xs text-muted-foreground font-mono">{scan.assignments?.tattoo_instance?.unique_code || 'Brak danych'}</p>
+                                <p className="font-semibold">{scan.assignments?.children?.name || 'Brak danych'}</p>
+                                <p className="text-xs text-muted-foreground font-mono">{scan.assignments?.tattoo_instances?.unique_code || 'Brak danych'}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 {scan.latitude && <MapPin className="h-4 w-4 text-blue-500" />}
