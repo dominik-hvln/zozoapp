@@ -5,19 +5,18 @@ import { api } from '@/lib/api';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
-import Link from 'next/link';
 
 // Import komponentów-bloków
 import { ChildrenBlock } from '@/components/dashboard/ChildrenBlock';
 import { QrCodesBlock } from '@/components/dashboard/QrCodesBlock';
+import { ActivitiesBlock } from '@/components/dashboard/ActivitiesBlock';
 import { YourProfileBlock } from '@/components/dashboard/YourProfileBlock';
 import { QuickAccessBlock } from '@/components/dashboard/QuickAccessBlock';
 import { SettingsMenuBlock } from '@/components/dashboard/SettingsMenuBlock';
 
 // Import komponentów UI
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { History, MapPin } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 
 // Dynamiczne importowanie mapy
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
@@ -25,14 +24,15 @@ const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLaye
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
 
 // --- TYPY I FUNKCJE API ---
+interface Child { id: string; name: string; avatar_url: string | null; _count: { assignments: number }; }
 interface Scan {
     id: string;
     scan_time: string;
     latitude: number | null;
     longitude: number | null;
     assignments: {
-        children: { name: string };
-        tattoo_instances: { unique_code: string };
+        child: { name: string };
+        tattoo_instance: { unique_code: string };
     };
 }
 interface Assignment {
@@ -42,45 +42,15 @@ interface Assignment {
     tattoo_instances: { unique_code: string } | null;
 }
 interface DashboardData {
-    recentChildren: any[];
+    recentChildren: Child[]; // POPRAWKA: Zamiast `any[]` używamy konkretnego typu `Child[]`
     activeTattoosCount: number;
     recentScans: Scan[];
     recentAssignments: Assignment[];
 }
+
 const getDashboardSummary = async (): Promise<DashboardData> => (await api.get('/dashboard/summary')).data;
 
-// --- WEWNĘTRZNY KOMPONENT ActivitiesBlock ---
-function ActivitiesBlock({ activities = [], onActivityClick }: { activities?: Scan[], onActivityClick: (scan: Scan) => void }) {
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center"><History className="h-5 w-5 mr-2 text-muted-foreground" /><span>Ostatnia Aktywność</span></CardTitle>
-                <CardDescription>Kliknij na wpis, aby zobaczyć szczegóły.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <ul className="space-y-3">
-                    {activities.map((scan) => (
-                        <li key={scan.id} className="flex items-start text-sm p-2 -mx-2 rounded-md hover:bg-gray-100 cursor-pointer" onClick={() => onActivityClick(scan)}>
-                            <div className="flex-1">
-                                {/* POPRAWKA: `child` -> `children`, `tattoo_instance` -> `tattoo_instances` */}
-                                <p className="font-semibold">{scan.assignments?.children?.name || 'Brak danych'}</p>
-                                <p className="text-xs text-muted-foreground font-mono">{scan.assignments?.tattoo_instances?.unique_code || 'Brak danych'}</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                {scan.latitude && <MapPin className="h-4 w-4 text-blue-500" />}
-                                <p className="text-xs text-muted-foreground whitespace-nowrap">{new Date(scan.scan_time).toLocaleTimeString('pl-PL')}</p>
-                            </div>
-                        </li>
-                    ))}
-                    {activities.length === 0 && <p className="text-center text-sm text-muted-foreground py-4">Brak zdarzeń.</p>}
-                </ul>
-            </CardContent>
-        </Card>
-    );
-}
-
-
-// --- GŁÓWNY KOMPONENT STRONY ---
+// --- KOMPONENT ---
 export default function PanelPage() {
     const [selectedScan, setSelectedScan] = useState<Scan | null>(null);
     const { data, isLoading, error } = useQuery({ queryKey: ['dashboardSummary'], queryFn: getDashboardSummary });
@@ -91,9 +61,9 @@ export default function PanelPage() {
     return (
         <>
             <div className="space-y-6">
-                <QuickAccessBlock />
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <div className="lg:col-span-2 space-y-6">
+                        <QuickAccessBlock />
                         <ChildrenBlock />
                         <QrCodesBlock assignments={data?.recentAssignments} />
                     </div>
@@ -109,7 +79,6 @@ export default function PanelPage() {
                     <DialogHeader><DialogTitle>Szczegóły Skanu</DialogTitle></DialogHeader>
                     {selectedScan && (
                         <div className="space-y-4">
-                            {/* POPRAWKA: `child` -> `children`, `tattoo_instance` -> `tattoo_instances` */}
                             <p><strong>Dziecko:</strong> {selectedScan.assignments.children.name}</p>
                             <p><strong>Kod:</strong> <span className="font-mono">{selectedScan.assignments.tattoo_instances.unique_code}</span></p>
                             <p><strong>Czas:</strong> {new Date(selectedScan.scan_time).toLocaleString('pl-PL')}</p>
