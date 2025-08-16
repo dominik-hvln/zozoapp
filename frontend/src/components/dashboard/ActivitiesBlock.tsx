@@ -4,10 +4,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { History, MapPin } from 'lucide-react';
 
+// POPRAWIONA, KOMPLETNA DEFINICJA TYPU SCAN
 interface Scan {
     id: string;
     scan_time: string;
     latitude: number | null;
+    longitude: number | null; // Upewniamy się, że to pole istnieje
     assignments: {
         child: { name: string } | null;
         tattoo_instance: { unique_code: string } | null;

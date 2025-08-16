@@ -2,7 +2,6 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import Link from 'next/link';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
@@ -17,11 +16,7 @@ import { SettingsMenuBlock } from '@/components/dashboard/SettingsMenuBlock';
 
 // Import komponentów UI
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Button } from '@/components/ui/button';
-import { Users, History, ArrowRight, MapPin } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { MapPin } from 'lucide-react';
 
 // Dynamiczne importowanie mapy
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
@@ -30,7 +25,17 @@ const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { 
 
 // --- TYPY I FUNKCJE API ---
 interface Child { id: string; name: string; avatar_url: string | null; _count: { assignments: number }; }
-interface Scan { id: string; scan_time: string; latitude: number | null; longitude: number | null; assignments: { child: { name: string }; tattoo_instance: { unique_code: string }; }; }
+// POPRAWIONA, KOMPLETNA DEFINICJA TYPU SCAN
+interface Scan {
+    id: string;
+    scan_time: string;
+    latitude: number | null;
+    longitude: number | null;
+    assignments: {
+        child: { name: string };
+        tattoo_instance: { unique_code: string };
+    };
+}
 interface Assignment { id: string; is_active: boolean; children: { name: string } | null; tattoo_instances: { unique_code: string } | null; }
 interface DashboardData {
     recentChildren: Child[];
@@ -52,6 +57,7 @@ export default function PanelPage() {
     return (
         <>
             <div className="space-y-6">
+
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <div className="lg:col-span-2 space-y-6">
                         <QuickAccessBlock />
@@ -60,7 +66,7 @@ export default function PanelPage() {
                     </div>
                     <div className="lg:col-span-1 space-y-6">
                         <YourProfileBlock />
-                        <ActivitiesBlock activities={data?.recentScans} onActivityClick={(scan) => setSelectedScan(scan)} />
+                        <ActivitiesBlock activities={data?.recentScans} onActivityClick={setSelectedScan} />
                         <SettingsMenuBlock />
                     </div>
                 </div>
@@ -70,8 +76,8 @@ export default function PanelPage() {
                     <DialogHeader><DialogTitle>Szczegóły Skanu</DialogTitle></DialogHeader>
                     {selectedScan && (
                         <div className="space-y-4">
-                            <p><strong>Dziecko:</strong> {selectedScan.assignments.child.name}</p>
-                            <p><strong>Kod:</strong> <span className="font-mono">{selectedScan.assignments.tattoo_instance.unique_code}</span></p>
+                            <p><strong>Dziecko:</strong> {selectedScan.assignments.children.name}</p>
+                            <p><strong>Kod:</strong> <span className="font-mono">{selectedScan.assignments.tattoo_instances.unique_code}</span></p>
                             <p><strong>Czas:</strong> {new Date(selectedScan.scan_time).toLocaleString('pl-PL')}</p>
                             {selectedScan.latitude && selectedScan.longitude ? (
                                 <div className="h-64 w-full rounded-md overflow-hidden mt-4">
