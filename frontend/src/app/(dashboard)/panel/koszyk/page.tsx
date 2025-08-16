@@ -4,24 +4,24 @@ import { useCartStore } from '@/store/cart.store';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
+import { StaticImageData } from 'next/image'; // Import do typowania obrazków
 
 // Import komponentów
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Trash2 } from 'lucide-react';
 import Image from 'next/image';
 
-// Import awatarów - dostosuj do swoich plików
+// Import awatarów
 import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
-import StrawberryIcon from '@/assets/avatars/strawberry.svg';
 
-const productImages: { [key: string]: any } = {
-    'Zestaw 5 Tatuaży ZozoApp': AppleIcon, // Przykładowe mapowanie nazwy na obrazek
+// POPRAWKA: Definiujemy poprawny typ dla obiektu z obrazkami
+const productImages: { [key: string]: StaticImageData } = {
+    'Zestaw 5 Tatuaży ZozoApp': AppleIcon,
     'Inny Produkt': LemonIcon,
 };
 
@@ -29,13 +29,11 @@ const productImages: { [key: string]: any } = {
 export default function KoszykPage() {
     const { items, removeItem, updateItemQuantity, clearCart } = useCartStore();
 
-    // --- Logika Obliczeń ---
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const shippingCost = subtotal > 10000 ? 0 : 999; // Darmowa dostawa powyżej 100 zł
+    const shippingCost = subtotal > 10000 ? 0 : 999;
     const total = subtotal + shippingCost;
     const amountToFreeShipping = 10000 - subtotal;
 
-    // --- Logika Płatności ---
     const checkoutMutation = useMutation({
         mutationFn: (cartItems: { priceId: string, quantity: number }[]) => api.post('/store/checkout/payment', { items: cartItems }),
         onSuccess: (response) => {
@@ -60,23 +58,21 @@ export default function KoszykPage() {
                 <p>Twój koszyk jest pusty.</p>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-                    {/* Lewa kolumna: Lista produktów */}
                     <div className="lg:col-span-2 space-y-4">
                         {items.map(item => (
-                            <Card key={item.id} className="flex flex-row items-center p-4 gap-4">
+                            <Card key={item.id} className="flex items-center p-4 gap-4">
                                 <Image src={productImages[item.name] || AppleIcon} alt={item.name} className="w-20 h-20" />
                                 <div className="flex-1">
                                     <h3 className="font-semibold">{item.name}</h3>
-                                    <p className="text-sm text-muted-foreground">Tatuaż z serii "Owoce", trwałość do 5 dni.</p>
+                                    {/* POPRAWKA: Usunięto niedozwolone cudzysłowy */}
+                                    <p className="text-sm text-muted-foreground">Tatuaż z serii Owoce, trwałość do 5 dni.</p>
                                 </div>
                                 <div className="flex items-center gap-4">
                                     <Select
                                         value={String(item.quantity)}
                                         onValueChange={(value) => updateItemQuantity(item.id, Number(value))}
                                     >
-                                        <SelectTrigger className="w-20">
-                                            <SelectValue />
-                                        </SelectTrigger>
+                                        <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             {[...Array(10).keys()].map(i => <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>)}
                                         </SelectContent>
@@ -90,7 +86,6 @@ export default function KoszykPage() {
                         ))}
                     </div>
 
-                    {/* Prawa kolumna: Podsumowanie */}
                     <div className="lg:col-span-1">
                         <Card>
                             <CardHeader><CardTitle>Podsumowanie zamówienia</CardTitle></CardHeader>
