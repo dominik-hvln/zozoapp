@@ -2,6 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import Link from 'next/link';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import Image from 'next/image';
@@ -10,11 +11,17 @@ import Image from 'next/image';
 import { ChildrenBlock } from '@/components/dashboard/ChildrenBlock';
 import { QrCodesBlock } from '@/components/dashboard/QrCodesBlock';
 import { ActivitiesBlock } from '@/components/dashboard/ActivitiesBlock';
+import { YourProfileBlock } from '@/components/dashboard/YourProfileBlock';
 import { QuickAccessBlock } from '@/components/dashboard/QuickAccessBlock';
+import { SettingsMenuBlock } from '@/components/dashboard/SettingsMenuBlock';
 
 // Import komponentów UI
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { MapPin } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import { Users, History, ArrowRight, MapPin } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 // Dynamiczne importowanie mapy
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
@@ -22,28 +29,9 @@ const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLaye
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
 
 // --- TYPY I FUNKCJE API ---
-interface Child {
-    id: string;
-    name: string;
-    avatar_url: string | null;
-    _count: { assignments: number };
-}
-interface Scan {
-    id: string;
-    scan_time: string;
-    latitude: number | null;
-    longitude: number | null;
-    assignments: {
-        child: { name: string };
-        tattoo_instance: { unique_code: string };
-    };
-}
-interface Assignment {
-    id: string;
-    is_active: boolean;
-    children: { name: string } | null;
-    tattoo_instances: { unique_code: string } | null;
-}
+interface Child { id: string; name: string; avatar_url: string | null; _count: { assignments: number }; }
+interface Scan { id: string; scan_time: string; latitude: number | null; longitude: number | null; assignments: { child: { name: string }; tattoo_instance: { unique_code: string }; }; }
+interface Assignment { id: string; is_active: boolean; children: { name: string } | null; tattoo_instances: { unique_code: string } | null; }
 interface DashboardData {
     recentChildren: Child[];
     activeTattoosCount: number;
@@ -71,7 +59,9 @@ export default function PanelPage() {
                         <QrCodesBlock assignments={data?.recentAssignments} />
                     </div>
                     <div className="lg:col-span-1 space-y-6">
-                        <ActivitiesBlock activities={data?.recentScans} onActivityClick={setSelectedScan} />
+                        <YourProfileBlock />
+                        <ActivitiesBlock activities={data?.recentScans} onActivityClick={(scan) => setSelectedScan(scan)} />
+                        <SettingsMenuBlock />
                     </div>
                 </div>
             </div>
@@ -90,9 +80,7 @@ export default function PanelPage() {
                                         <Marker position={[selectedScan.latitude, selectedScan.longitude]} />
                                     </MapContainer>
                                 </div>
-                            ) : (
-                                <p className="text-sm text-muted-foreground italic flex items-center gap-2"><MapPin className="h-4 w-4" /> Brak danych o lokalizacji dla tego skanu.</p>
-                            )}
+                            ) : ( <p className="text-sm text-muted-foreground italic flex items-center gap-2"><MapPin className="h-4 w-4" /> Brak danych o lokalizacji dla tego skanu.</p> )}
                         </div>
                     )}
                 </DialogContent>
