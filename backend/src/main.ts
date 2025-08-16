@@ -15,8 +15,13 @@ async function bootstrap() {
         process.env.FRONTEND_URL,
         process.env.ADMIN_URL,
     ];
+    if (process.env.NODE_ENV !== 'production') {
+        allowedOrigins.push('http://localhost:3000');
+        allowedOrigins.push('http://localhost:3002');
+    }
     app.enableCors({
         origin: (origin, callback) => {
+            const aO = allowedOrigins.filter(Boolean);
             if (!origin || allowedOrigins.includes(origin)) {
                 callback(null, true);
             } else {

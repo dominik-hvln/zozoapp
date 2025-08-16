@@ -6,11 +6,13 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, PartyPopper, XCircle, Loader2 } from 'lucide-react';
+import { Menu, PartyPopper, XCircle, Loader2, ShoppingCart } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useSocket } from '@/hooks/useSocket';
+import { useCartStore } from '@/store/cart.store';
+import Link from 'next/link';
 
 function PaymentStatus() {
     const searchParams = useSearchParams();
@@ -60,6 +62,31 @@ function PaymentStatus() {
     return null;
 }
 
+function Header() {
+    const itemsInCart = useCartStore((state) => state.items.length);
+
+    return (
+        <header className="flex h-14 items-center gap-4 border-b bg-white px-4 lg:h-[60px] lg:px-6 sticky top-0 z-30">
+            {/* Ten przycisk jest tylko dla mobilnego sidebara */}
+            <div className="md:hidden">
+                {/* Tutaj możesz w przyszłości wstawić mobilny sidebar z komponentu Sheet */}
+            </div>
+            <div className="w-full flex-1">
+                {/* Można tu dodać wyszukiwarkę w przyszłości */}
+            </div>
+            <Link href="/panel/koszyk">
+                <Button variant="outline" size="icon" className="relative">
+                    <ShoppingCart className="h-5 w-5" />
+                    {itemsInCart > 0 && (
+                        <span className="absolute top-1 right-1 bg-primary text-primary-foreground text-xs w-3 h-3 rounded-full flex items-center justify-center">
+                            {itemsInCart}
+                        </span>
+                    )}
+                </Button>
+            </Link>
+        </header>
+    );
+}
 
 export default function DashboardLayout({ children }: { children: React.ReactNode; }) {
     const { token, user, logout } = useAuthStore();
@@ -97,18 +124,19 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
 
                 <div className="flex flex-col">
-                    <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6 md:hidden">
-                        <Sheet>
-                            <SheetTrigger asChild>
-                                <Button variant="outline" size="icon" className="shrink-0"><Menu className="h-5 w-5" /></Button>
-                            </SheetTrigger>
-                            <SheetContent side="left" className="flex flex-col p-0 w-64">
-                                <SheetHeader className='sr-only'><SheetTitle>Menu Główne</SheetTitle></SheetHeader>
-                                <Sidebar />
-                            </SheetContent>
-                        </Sheet>
-                        <div className="text-lg font-bold">ZozoApp</div>
-                    </header>
+                    <Header />
+                    {/*<header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6 md:hidden">*/}
+                    {/*    <Sheet>*/}
+                    {/*        <SheetTrigger asChild>*/}
+                    {/*            <Button variant="outline" size="icon" className="shrink-0"><Menu className="h-5 w-5" /></Button>*/}
+                    {/*        </SheetTrigger>*/}
+                    {/*        <SheetContent side="left" className="flex flex-col p-0 w-64">*/}
+                    {/*            <SheetHeader className='sr-only'><SheetTitle>Menu Główne</SheetTitle></SheetHeader>*/}
+                    {/*            <Sidebar />*/}
+                    {/*        </SheetContent>*/}
+                    {/*    </Sheet>*/}
+                    {/*    <div className="text-lg font-bold">ZozoApp</div>*/}
+                    {/*</header>*/}
 
                     <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative">
                         {isAccountBlocked && (
