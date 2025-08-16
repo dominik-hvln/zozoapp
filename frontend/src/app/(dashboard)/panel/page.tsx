@@ -4,34 +4,21 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
-import Image from 'next/image';
-
-// Import komponentów-bloków
 import { ChildrenBlock } from '@/components/dashboard/ChildrenBlock';
 import { QrCodesBlock } from '@/components/dashboard/QrCodesBlock';
 import { ActivitiesBlock } from '@/components/dashboard/ActivitiesBlock';
 import { YourProfileBlock } from '@/components/dashboard/YourProfileBlock';
 import { QuickAccessBlock } from '@/components/dashboard/QuickAccessBlock';
 import { SettingsMenuBlock } from '@/components/dashboard/SettingsMenuBlock';
-
-// Import komponentów UI
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MapPin } from 'lucide-react';
-import { Scan, Assignment, DashboardData } from '@/types';
+import { Scan, DashboardData } from '@/types';
 
-// Dynamiczne importowanie mapy
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
 
-// --- TYPY I FUNKCJE API ---
 interface Child { id: string; name: string; avatar_url: string | null; _count: { assignments: number }; }
-interface DashboardData {
-    recentChildren: Child[]; // POPRAWKA: Zamiast `any[]` używamy konkretnego typu `Child[]`
-    activeTattoosCount: number;
-    recentScans: Scan[];
-    recentAssignments: Assignment[];
-}
 
 const getDashboardSummary = async (): Promise<DashboardData> => (await api.get('/dashboard/summary')).data;
 
