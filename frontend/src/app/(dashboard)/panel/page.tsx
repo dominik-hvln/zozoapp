@@ -4,14 +4,13 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 
 // Import komponentów-bloków
 import { ChildrenBlock } from '@/components/dashboard/ChildrenBlock';
 import { QrCodesBlock } from '@/components/dashboard/QrCodesBlock';
 import { ActivitiesBlock } from '@/components/dashboard/ActivitiesBlock';
-import { YourProfileBlock } from '@/components/dashboard/YourProfileBlock';
 import { QuickAccessBlock } from '@/components/dashboard/QuickAccessBlock';
-import { SettingsMenuBlock } from '@/components/dashboard/SettingsMenuBlock';
 
 // Import komponentów UI
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -23,10 +22,30 @@ const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLaye
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
 
 // --- TYPY I FUNKCJE API ---
-interface Scan { id: string; scan_time: string; latitude: number | null; longitude: number | null; assignments: { child: { name: string }; tattoo_instance: { unique_code: string }; }; }
-interface Assignment { id: string; is_active: boolean; children: { name: string } | null; tattoo_instances: { unique_code: string } | null; }
+interface Child {
+    id: string;
+    name: string;
+    avatar_url: string | null;
+    _count: { assignments: number };
+}
+interface Scan {
+    id: string;
+    scan_time: string;
+    latitude: number | null;
+    longitude: number | null;
+    assignments: {
+        child: { name: string };
+        tattoo_instance: { unique_code: string };
+    };
+}
+interface Assignment {
+    id: string;
+    is_active: boolean;
+    children: { name: string } | null;
+    tattoo_instances: { unique_code: string } | null;
+}
 interface DashboardData {
-    recentChildren: any[];
+    recentChildren: Child[];
     activeTattoosCount: number;
     recentScans: Scan[];
     recentAssignments: Assignment[];
@@ -61,8 +80,8 @@ export default function PanelPage() {
                     <DialogHeader><DialogTitle>Szczegóły Skanu</DialogTitle></DialogHeader>
                     {selectedScan && (
                         <div className="space-y-4">
-                            <p><strong>Dziecko:</strong> {selectedScan.assignments.children.name}</p>
-                            <p><strong>Kod:</strong> <span className="font-mono">{selectedScan.assignments.tattoo_instances.unique_code}</span></p>
+                            <p><strong>Dziecko:</strong> {selectedScan.assignments.child.name}</p>
+                            <p><strong>Kod:</strong> <span className="font-mono">{selectedScan.assignments.tattoo_instance.unique_code}</span></p>
                             <p><strong>Czas:</strong> {new Date(selectedScan.scan_time).toLocaleString('pl-PL')}</p>
                             {selectedScan.latitude && selectedScan.longitude ? (
                                 <div className="h-64 w-full rounded-md overflow-hidden mt-4">
@@ -71,7 +90,9 @@ export default function PanelPage() {
                                         <Marker position={[selectedScan.latitude, selectedScan.longitude]} />
                                     </MapContainer>
                                 </div>
-                            ) : ( <p className="text-sm text-muted-foreground italic flex items-center gap-2"><MapPin className="h-4 w-4" /> Brak danych o lokalizacji dla tego skanu.</p> )}
+                            ) : (
+                                <p className="text-sm text-muted-foreground italic flex items-center gap-2"><MapPin className="h-4 w-4" /> Brak danych o lokalizacji dla tego skanu.</p>
+                            )}
                         </div>
                     )}
                 </DialogContent>
