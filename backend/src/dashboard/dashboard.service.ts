@@ -12,22 +12,15 @@ export class DashboardService {
             recentScans,
             recentAssignments,
         ] = await Promise.all([
-            // Pobiera dzieci z licznikiem tatuaży
             this.prisma.children.findMany({
                 where: { user_id: userId },
-                include: {
-                    _count: {
-                        select: { assignments: { where: { is_active: true } } },
-                    },
-                },
+                include: { _count: { select: { assignments: { where: { is_active: true } } } } },
                 take: 4,
                 orderBy: { created_at: 'desc' },
             }),
-            // Zlicza aktywne tatuaże
             this.prisma.assignments.count({
                 where: { user_id: userId, is_active: true },
             }),
-            // Pobiera ostatnie skany
             this.prisma.scans.findMany({
                 where: { assignments: { user_id: userId } },
                 take: 5,
@@ -39,18 +32,19 @@ export class DashboardService {
                     longitude: true,
                     assignments: {
                         include: {
+                            // Używamy poprawnych nazw relacji z Twojej schemy
                             tattoo_instances: { select: { unique_code: true } },
                             children: { select: { name: true } },
                         },
                     },
                 },
             }),
-            // Pobiera ostatnie przypisania dla bloku kodów QR
             this.prisma.assignments.findMany({
                 where: { user_id: userId },
                 take: 4,
                 orderBy: { created_at: 'desc' },
                 include: {
+                    // Używamy poprawnych nazw relacji z Twojej schemy
                     children: { select: { name: true } },
                     tattoo_instances: { select: { unique_code: true } },
                 },
