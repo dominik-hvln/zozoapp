@@ -17,6 +17,7 @@ import { SettingsMenuBlock } from '@/components/dashboard/SettingsMenuBlock';
 // Import komponentów UI
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MapPin } from 'lucide-react';
+import { Scan, DashboardData } from '@/types';
 
 // Dynamiczne importowanie mapy
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
@@ -60,7 +61,6 @@ export default function PanelPage() {
                     </div>
                     <div className="lg:col-span-1 space-y-6">
                         <YourProfileBlock />
-                        {/* Przekazujemy nową, w 100% zgodną funkcję */}
                         <ActivitiesBlock activities={data?.recentScans} onActivityClick={handleActivityClick} />
                         <SettingsMenuBlock />
                     </div>

@@ -3,8 +3,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { History, MapPin } from 'lucide-react';
+import { Scan } from '@/types';
 
-// POPRAWIONA, KOMPLETNA DEFINICJA TYPU SCAN
 interface Scan {
     id: string;
     scan_time: string;
@@ -14,6 +14,11 @@ interface Scan {
         child: { name: string } | null;
         tattoo_instance: { unique_code: string } | null;
     };
+}
+
+interface ActivitiesBlockProps {
+    activities?: Scan[];
+    onActivityClick: (scan: Scan) => void;
 }
 
 interface ActivitiesBlockProps {
