@@ -17,7 +17,7 @@ export function Sidebar() {
     const { user, logout } = useAuthStore();
 
     return (
-        <aside className="w-full h-full bg-muted/40 flex flex-col">
+        <aside className="w-64 h-full bg-muted/40 flex flex-col">
             <div className="p-4 border-b">
                 <Link href="/admin" className="text-2xl font-bold tracking-tighter text-gray-900">
                     ZozoApp Admin
