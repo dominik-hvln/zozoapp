@@ -13,6 +13,7 @@ interface Product {
     name: string;
     description: string | null;
     price: number;
+    stripe_price_id: string | null;
 }
 
 const getProducts = async (): Promise<Product[]> => {

@@ -65,7 +65,6 @@ export default function KoszykPage() {
                                 <Image src={productImages[item.name] || AppleIcon} alt={item.name} className="w-20 h-20" />
                                 <div className="flex-1">
                                     <h3 className="font-semibold">{item.name}</h3>
-                                    {/* POPRAWKA: Usunięto niedozwolone cudzysłowy */}
                                     <p className="text-sm text-muted-foreground">Tatuaż z serii Owoce, trwałość do 5 dni.</p>
                                 </div>
                                 <div className="flex items-center gap-4">
