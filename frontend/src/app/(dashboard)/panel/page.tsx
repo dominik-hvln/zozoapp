@@ -25,17 +25,7 @@ const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { 
 
 // --- TYPY I FUNKCJE API ---
 interface Child { id: string; name: string; avatar_url: string | null; _count: { assignments: number }; }
-// POPRAWIONA, KOMPLETNA DEFINICJA TYPU SCAN
-interface Scan {
-    id: string;
-    scan_time: string;
-    latitude: number | null;
-    longitude: number | null;
-    assignments: {
-        child: { name: string };
-        tattoo_instance: { unique_code: string };
-    };
-}
+interface Scan { id: string; scan_time: string; latitude: number | null; longitude: number | null; assignments: { child: { name: string }; tattoo_instance: { unique_code: string }; }; }
 interface Assignment { id: string; is_active: boolean; children: { name: string } | null; tattoo_instances: { unique_code: string } | null; }
 interface DashboardData {
     recentChildren: Child[];
@@ -51,13 +41,17 @@ export default function PanelPage() {
     const [selectedScan, setSelectedScan] = useState<Scan | null>(null);
     const { data, isLoading, error } = useQuery({ queryKey: ['dashboardSummary'], queryFn: getDashboardSummary });
 
+    // POPRAWKA: Tworzymy nową funkcję-pośrednika
+    const handleActivityClick = (scan: Scan) => {
+        setSelectedScan(scan);
+    };
+
     if (isLoading) return <div className="p-4 lg:p-8">Ładowanie danych...</div>;
     if (error) return <div className="p-4 lg:p-8 text-red-500">Nie udało się załadować danych. Spróbuj odświeżyć stronę.</div>;
 
     return (
         <>
             <div className="space-y-6">
-
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <div className="lg:col-span-2 space-y-6">
                         <QuickAccessBlock />
@@ -66,7 +60,8 @@ export default function PanelPage() {
                     </div>
                     <div className="lg:col-span-1 space-y-6">
                         <YourProfileBlock />
-                        <ActivitiesBlock activities={data?.recentScans} onActivityClick={setSelectedScan} />
+                        {/* Przekazujemy nową, w 100% zgodną funkcję */}
+                        <ActivitiesBlock activities={data?.recentScans} onActivityClick={handleActivityClick} />
                         <SettingsMenuBlock />
                     </div>
                 </div>
