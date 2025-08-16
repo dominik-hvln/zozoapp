@@ -6,45 +6,62 @@ export class DashboardService {
     constructor(private prisma: PrismaService) {}
 
     async getClientDashboardSummary(userId: string) {
-        const recentChildren = await this.prisma.children.findMany({
-            where: { user_id: userId },
-            take: 4,
-            orderBy: { created_at: 'desc' },
-        });
-
-        const activeTattoosCount = await this.prisma.assignments.count({
-            where: {
-                user_id: userId,
-                is_active: true,
-            },
-        });
-
-        const recentScans = await this.prisma.scans.findMany({
-            where: {
-                assignments: {
-                    user_id: userId,
-                },
-            },
-            take: 5,
-            orderBy: { scan_time: 'desc' },
-            select: {
-                id: true,
-                scan_time: true,
-                latitude: true,
-                longitude: true,
-                assignments: {
-                    include: {
-                        tattoo_instances: { select: { unique_code: true } },
-                        children: { select: { name: true } },
+        const [
+            recentChildren,
+            activeTattoosCount,
+            recentScans,
+            recentAssignments,
+        ] = await Promise.all([
+            // Pobiera dzieci z licznikiem tatuaży
+            this.prisma.children.findMany({
+                where: { user_id: userId },
+                include: {
+                    _count: {
+                        select: { assignments: { where: { is_active: true } } },
                     },
                 },
-            },
-        });
+                take: 4,
+                orderBy: { created_at: 'desc' },
+            }),
+            // Zlicza aktywne tatuaże
+            this.prisma.assignments.count({
+                where: { user_id: userId, is_active: true },
+            }),
+            // Pobiera ostatnie skany
+            this.prisma.scans.findMany({
+                where: { assignments: { user_id: userId } },
+                take: 5,
+                orderBy: { scan_time: 'desc' },
+                select: {
+                    id: true,
+                    scan_time: true,
+                    latitude: true,
+                    longitude: true,
+                    assignments: {
+                        include: {
+                            tattoo_instances: { select: { unique_code: true } },
+                            children: { select: { name: true } },
+                        },
+                    },
+                },
+            }),
+            // Pobiera ostatnie przypisania dla bloku kodów QR
+            this.prisma.assignments.findMany({
+                where: { user_id: userId },
+                take: 4,
+                orderBy: { created_at: 'desc' },
+                include: {
+                    children: { select: { name: true } },
+                    tattoo_instances: { select: { unique_code: true } },
+                },
+            }),
+        ]);
 
         return {
             recentChildren,
             activeTattoosCount,
             recentScans,
+            recentAssignments,
         };
     }
 }

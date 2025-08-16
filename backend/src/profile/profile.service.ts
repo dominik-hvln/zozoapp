@@ -6,15 +6,40 @@ import * as bcrypt from 'bcrypt';
 export class ProfileService {
     constructor(private prisma: PrismaService) {}
 
-    async getProfile(userId: string) {
+    async getFullProfile(userId: string) {
         const user = await this.prisma.users.findUnique({
             where: { id: userId },
-            select: { email: true, first_name: true, last_name: true, phone: true },
+            select: {
+                id: true,
+                email: true,
+                first_name: true,
+                last_name: true,
+                phone: true,
+                created_at: true,
+                children: {
+                    include: {
+                        _count: {
+                            select: { assignments: { where: { is_active: true } } },
+                        },
+                    },
+                },
+                _count: {
+                    select: {
+                        assignments: true, // Liczba wszystkich kodów
+                    },
+                },
+            },
         });
+
         if (!user) {
             throw new NotFoundException('Profil nie znaleziony.');
         }
-        return user;
+
+        // W przyszłości dodamy tu logikę do pobierania skanów i subskrypcji
+        const scansCount = 0;
+        const subscriptionStatus = 'Standard';
+
+        return { ...user, scansCount, subscriptionStatus };
     }
 
     updateProfile(userId: string, data: { firstName: string; lastName: string; phone: string }) {
@@ -30,19 +55,9 @@ export class ProfileService {
 
     async changePassword(userId: string, oldPass: string, newPass: string) {
         const user = await this.prisma.users.findUnique({ where: { id: userId } });
-
-        // POPRAWKA JEST TUTAJ:
-        // Sprawdzamy, czy na pewno znaleźliśmy użytkownika w bazie
-        if (!user) {
-            throw new UnauthorizedException('Użytkownik nie istnieje.');
-        }
-
+        if (!user) { throw new UnauthorizedException('Użytkownik nie istnieje.'); }
         const isPasswordMatching = await bcrypt.compare(oldPass, user.password_hash);
-
-        if (!isPasswordMatching) {
-            throw new UnauthorizedException('Stare hasło jest nieprawidłowe.');
-        }
-
+        if (!isPasswordMatching) { throw new UnauthorizedException('Stare hasło jest nieprawidłowe.'); }
         const newHashedPassword = await bcrypt.hash(newPass, 10);
         return this.prisma.users.update({
             where: { id: userId },

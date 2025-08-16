@@ -9,7 +9,7 @@ export class ProfileController {
 
     @Get('me')
     getProfile(@Request() req) {
-        return this.profileService.getProfile(req.user.userId);
+        return this.profileService.getFullProfile(req.user.userId);
     }
 
     @Patch('me')
