@@ -5,22 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { History, MapPin } from 'lucide-react';
 import { Scan } from '@/types';
 
-interface Scan {
-    id: string;
-    scan_time: string;
-    latitude: number | null;
-    longitude: number | null; // Upewniamy się, że to pole istnieje
-    assignments: {
-        child: { name: string } | null;
-        tattoo_instance: { unique_code: string } | null;
-    };
-}
-
-interface ActivitiesBlockProps {
-    activities?: Scan[];
-    onActivityClick: (scan: Scan) => void;
-}
-
 interface ActivitiesBlockProps {
     activities?: Scan[];
     onActivityClick: (scan: Scan) => void;

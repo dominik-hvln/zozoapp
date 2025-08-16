@@ -17,6 +17,7 @@ import { SettingsMenuBlock } from '@/components/dashboard/SettingsMenuBlock';
 // Import komponentów UI
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { MapPin } from 'lucide-react';
+import { Scan, Assignment, DashboardData } from '@/types';
 
 // Dynamiczne importowanie mapy
 const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
@@ -25,22 +26,6 @@ const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { 
 
 // --- TYPY I FUNKCJE API ---
 interface Child { id: string; name: string; avatar_url: string | null; _count: { assignments: number }; }
-interface Scan {
-    id: string;
-    scan_time: string;
-    latitude: number | null;
-    longitude: number | null;
-    assignments: {
-        child: { name: string };
-        tattoo_instance: { unique_code: string };
-    };
-}
-interface Assignment {
-    id: string;
-    is_active: boolean;
-    children: { name: string } | null;
-    tattoo_instances: { unique_code: string } | null;
-}
 interface DashboardData {
     recentChildren: Child[]; // POPRAWKA: Zamiast `any[]` używamy konkretnego typu `Child[]`
     activeTattoosCount: number;
