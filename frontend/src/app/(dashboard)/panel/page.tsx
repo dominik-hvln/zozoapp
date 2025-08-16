@@ -33,8 +33,8 @@ interface Scan {
     latitude: number | null;
     longitude: number | null;
     assignments: {
-        child: { name: string };
-        tattoo_instance: { unique_code: string };
+        children: { name: string };
+        tattoo_instances: { unique_code: string };
     };
 }
 interface Assignment {
