@@ -6,16 +6,19 @@ import { useState } from 'react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
 import { QRCodeSVG } from 'qrcode.react';
+import ReactDOMServer from 'react-dom/server';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Download, QrCode } from 'lucide-react';
+import { Download, QrCode, FileArchive } from 'lucide-react';
 
-// --- TYPY I FUNKCJE API ---
 interface Assignment {
     id: string;
     users: { email: string } | null;
@@ -32,11 +35,12 @@ const getNewTattoos = async (): Promise<NewTattoo[]> => (await api.get('/admin/t
 const generateCodes = async (count: number) => (await api.post('/admin/tattoos/generate', { count })).data;
 const deactivateAssignment = async (id: string) => (await api.post(`/admin/assignments/${id}/deactivate`)).data;
 
-// --- KOMPONENT ---
 export default function AdminTattoosPage() {
     const queryClient = useQueryClient();
     const [codeCount, setCodeCount] = useState('50');
     const [qrCodeData, setQrCodeData] = useState<{ code: string; content: string } | null>(null);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [isExporting, setIsExporting] = useState(false);
 
     const { data: assignments, isLoading: isLoadingAssignments } = useQuery({ queryKey: ['admin-assignments'], queryFn: getAssignments });
     const { data: newTattoos, isLoading: isLoadingNew } = useQuery({ queryKey: ['admin-new-tattoos'], queryFn: getNewTattoos });
@@ -115,6 +119,50 @@ export default function AdminTattoosPage() {
         }
     };
 
+    const handleSelect = (id: string) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    };
+
+    const handleSelectAll = (isChecked: boolean | 'indeterminate') => {
+        if (isChecked === true) {
+            setSelectedIds(newTattoos?.map(t => t.id) || []);
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleBulkExport = async () => {
+        if (selectedIds.length === 0) {
+            toast.warning('Zaznacz przynajmniej jeden kod do eksportu.');
+            return;
+        }
+        setIsExporting(true);
+        toast.info(`Rozpoczynam eksport ${selectedIds.length} kodów QR...`);
+
+        try {
+            const zip = new JSZip();
+            const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://zozoapp.vercel.app';
+            const selectedTattoos = newTattoos?.filter(t => selectedIds.includes(t.id)) || [];
+
+            for (const tattoo of selectedTattoos) {
+                const qrContent = `${frontendUrl}/t/${tattoo.unique_code}`;
+                const svgString = ReactDOMServer.renderToStaticMarkup(
+                    <QRCodeSVG value={qrContent} size={256} level="H" />
+                );
+                zip.file(`${tattoo.unique_code}.svg`, svgString);
+            }
+
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            saveAs(zipBlob, 'qrcodes_svg.zip');
+            toast.success('Kody QR zostały pomyślnie wyeksportowane.');
+            setSelectedIds([]);
+        } catch (error) {
+            toast.error('Wystąpił błąd podczas eksportu plików SVG.');
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     return (
         <div className="p-10 space-y-8">
             <div>
@@ -147,20 +195,29 @@ export default function AdminTattoosPage() {
             </Card>
 
             <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
                     <div>
                         <CardTitle>Nowe, nieprzypisane kody ({newTattoos?.length || 0})</CardTitle>
-                        <CardDescription>Te kody są gotowe do wysłania klientom.</CardDescription>
+                        <CardDescription>Zaznacz kody, które chcesz wyeksportować.</CardDescription>
                     </div>
-                    <Button onClick={handleExport} disabled={!newTattoos || newTattoos.length === 0}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Eksportuj do CSV
-                    </Button>
+                    <div className="flex gap-2 mt-4 sm:mt-0">
+                        <Button onClick={handleExport} disabled={!newTattoos || newTattoos.length === 0} variant="outline"><Download className="mr-2 h-4 w-4" />Eksportuj Listę (CSV)</Button>
+                        <Button onClick={handleBulkExport} disabled={selectedIds.length === 0 || isExporting}>
+                            <FileArchive className="mr-2 h-4 w-4" />
+                            {isExporting ? 'Eksportowanie...' : `Eksportuj Zaznaczone (${selectedIds.length})`}
+                        </Button>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <Table>
                         <TableHeader>
                             <TableRow>
+                                <TableHead className="w-[50px]">
+                                    <Checkbox
+                                        onCheckedChange={handleSelectAll}
+                                        checked={newTattoos && selectedIds.length > 0 && selectedIds.length === newTattoos.length ? true : (selectedIds.length > 0 ? 'indeterminate' : false)}
+                                    />
+                                </TableHead>
                                 <TableHead>Kod Tatuażu</TableHead>
                                 <TableHead>Data Wygenerowania</TableHead>
                                 <TableHead className="text-right">Akcje</TableHead>
@@ -172,6 +229,7 @@ export default function AdminTattoosPage() {
                             ) : (
                                 newTattoos?.map((tattoo) => (
                                     <TableRow key={tattoo.id}>
+                                        <TableCell><Checkbox onCheckedChange={() => handleSelect(tattoo.id)} checked={selectedIds.includes(tattoo.id)} /></TableCell>
                                         <TableCell className="font-mono">{tattoo.unique_code}</TableCell>
                                         <TableCell>{new Date(tattoo.created_at).toLocaleString('pl-PL')}</TableCell>
                                         <TableCell className="text-right">
