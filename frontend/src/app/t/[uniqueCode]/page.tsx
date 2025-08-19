@@ -1,10 +1,10 @@
-import { Card, CardContent, CardFooter } from "@/components/ui/card"; // Dodaj CardFooter
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Phone } from "lucide-react";
 import LocationHandler from "./LocationHandler";
 import Image from "next/image";
-import AppleIcon from '@/assets/avatars/apple.svg'; // Przykładowy fallback
+import AppleIcon from '@/assets/avatars/apple.svg';
 
 // --- TYPY I FUNKCJE API (bez zmian) ---
 interface ScanData {
@@ -31,9 +31,13 @@ async function getScanData(uniqueCode: string): Promise<ScanData> {
 }
 
 // --- OSTATECZNY KOMPONENT STRONY ---
-export default async function ScanPage({ params }: { params: { uniqueCode: string } }) {
+export default async function ScanPage({ params }: { params: Promise<{ uniqueCode: string }> }) {
+    // OSTATECZNA POPRAWKA JEST TUTAJ:
+    // "Odczekujemy" na parametry, zanim ich użyjemy
+    const { uniqueCode } = await params;
+
     try {
-        const data = await getScanData(params.uniqueCode);
+        const data = await getScanData(uniqueCode);
         const FallbackIcon = AppleIcon;
 
         return (
@@ -46,14 +50,12 @@ export default async function ScanPage({ params }: { params: { uniqueCode: strin
                         <p className="text-sm text-muted-foreground">
                             Zeskanowałeś tatuaż bezpieczeństwa Zozo.
                         </p>
-
                         <Avatar className="w-20 h-20 mx-auto border-2 border-white shadow-sm">
                             <AvatarImage src={data.child.avatar_url || undefined} alt={data.child.name} />
                             <AvatarFallback className="p-1 bg-gray-100">
                                 <Image src={FallbackIcon} alt="Owoc" />
                             </AvatarFallback>
                         </Avatar>
-
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-center gap-4">
                                 <div>
@@ -72,23 +74,19 @@ export default async function ScanPage({ params }: { params: { uniqueCode: strin
                                 </div>
                             )}
                         </div>
-
                         <p className="text-sm font-bold pt-2">
                             Tatuaż został zeskanowany o: {new Date().toLocaleTimeString('pl-PL')}
                         </p>
-
                         <div className="border-2 rounded-md p-3 mt-3">
                             <p className="font-bold">{data.parent.fullName}</p>
                             <p className="text-sm text-muted-foreground">Nr. telefonu: {data.parent.phone || 'Nie podano'}</p>
                         </div>
-
                         {data.parent.phone && (
                             <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-lg font-bold py-6 rounded-lg">
                                 <a href={`tel:${data.parent.phone}`}><Phone className="mr-2 h-5 w-5"/> Zadzwoń do rodzica</a>
                             </Button>
                         )}
                     </CardContent>
-                    {/* POPRAWKA JEST TUTAJ: */}
                     <CardFooter className="p-4 mx-auto">
                         <LocationHandler scanId={data.scanId} />
                     </CardFooter>
