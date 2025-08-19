@@ -1,24 +1,31 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ChildrenService {
     constructor(private prisma: PrismaService) {}
 
-    create(name: string, userId: string) {
+    create(data: Omit<Prisma.childrenUncheckedCreateInput, 'user_id'>, userId: string) {
         return this.prisma.children.create({
             data: {
-                name,
-                user_id: userId,
+                ...data,
+                users: {
+                    connect: {
+                        id: userId,
+                    },
+                },
             },
         });
     }
 
+    // POPRAWKA JEST TUTAJ:
     findAllForUser(userId: string) {
         return this.prisma.children.findMany({
             where: {
                 user_id: userId,
             },
+            // Przywracamy dołączanie licznika _count
             include: {
                 _count: {
                     select: {
@@ -29,20 +36,18 @@ export class ChildrenService {
                 },
             },
             orderBy: {
-                created_at: 'asc'
-            }
+                created_at: 'asc',
+            },
         });
     }
 
-    update(childId: string, name: string, userId: string) {
+    update(childId: string, data: Prisma.childrenUncheckedUpdateInput, userId: string) {
         return this.prisma.children.updateMany({
             where: {
                 id: childId,
                 user_id: userId,
             },
-            data: {
-                name,
-            },
+            data,
         });
     }
 

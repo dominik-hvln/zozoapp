@@ -12,6 +12,7 @@ import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useSocket } from '@/hooks/useSocket';
 import { Header } from '@/components/layout/Header';
+import { DatePickerDefaults } from '@/components/utils/DatePickerDefaults';
 
 function PaymentStatus() {
     const searchParams = useSearchParams();
@@ -90,6 +91,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const isAccountBlocked = user?.status === 'BLOCKED';
     return (
         <>
+            <DatePickerDefaults />
             <PaymentStatus /> {/* Dodajemy komponent obsługi płatności */}
             <div className="grid min-h-screen w-full mt-6">
                 <div className="flex flex-col">

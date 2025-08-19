@@ -1,17 +1,28 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { User, Phone, MessageSquare } from "lucide-react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card"; // Dodaj CardFooter
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Phone } from "lucide-react";
 import LocationHandler from "./LocationHandler";
+import Image from "next/image";
+import AppleIcon from '@/assets/avatars/apple.svg'; // Przykładowy fallback
 
+// --- TYPY I FUNKCJE API (bez zmian) ---
 interface ScanData {
     scanId: string;
-    childName: string;
-    parentName: string;
-    parentPhone: string | null;
-    message: string | null;
+    child: {
+        name: string;
+        age: number | null;
+        avatar_url: string | null;
+        important_info: string | null;
+    };
+    parent: {
+        fullName: string;
+        phone: string | null;
+    };
 }
 
 async function getScanData(uniqueCode: string): Promise<ScanData> {
-    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/scans/${uniqueCode}`;
+    const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/scans/${uniqueCode}`;
     const res = await fetch(apiUrl, { cache: 'no-store' });
     if (!res.ok) {
         throw new Error('Nie udało się pobrać danych.');
@@ -19,40 +30,79 @@ async function getScanData(uniqueCode: string): Promise<ScanData> {
     return res.json();
 }
 
-export default async function ScanPage({ params }: { params: Promise<{ uniqueCode: string }> }) {
-    const { uniqueCode } = await params;
-
+// --- OSTATECZNY KOMPONENT STRONY ---
+export default async function ScanPage({ params }: { params: { uniqueCode: string } }) {
     try {
-        const data = await getScanData(uniqueCode);
+        const data = await getScanData(params.uniqueCode);
+        const FallbackIcon = AppleIcon;
 
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-                <Card className="w-full max-w-md text-center">
-                    <CardHeader>
-                        <CardTitle className="text-2xl">Dziękujemy za pomoc!</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <p>
-                            Znalazłeś/aś tatuaż należący do{' '}
-                            <span className="font-bold">{data.childName}</span>.
+            <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4 font-sans">
+                <Card className="w-full max-w-md shadow-lg rounded-xl overflow-hidden">
+                    <CardContent className="text-center p-6 space-y-4">
+                        <h1 className="text-xl font-semibold text-gray-800">
+                            To dziecko może potrzebować pomocy!
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            Zeskanowałeś tatuaż bezpieczeństwa Zozo.
                         </p>
-                        <p className="text-muted-foreground">Prosimy o pilny kontakt z opiekunem. Rodzic został już powiadomiony.</p>
-                        <div className="border-t pt-4 space-y-3">
-                            <div className="flex items-center justify-center gap-3"><User className="h-5 w-5 text-muted-foreground" /><span className="font-semibold">{data.parentName}</span></div>
-                            {data.parentPhone && <div className="flex items-center justify-center gap-3"><Phone className="h-5 w-5 text-muted-foreground" /><a href={`tel:${data.parentPhone}`} className="font-semibold text-blue-600 hover:underline">{data.parentPhone}</a></div>}
-                            {data.message && <div className="flex items-start text-left gap-3 pt-2 bg-gray-50 p-3 rounded-md"><MessageSquare className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-1" /><p className="text-sm italic">&quot;{data.message}&quot;</p></div>}
+
+                        <Avatar className="w-20 h-20 mx-auto border-2 border-white shadow-sm">
+                            <AvatarImage src={data.child.avatar_url || undefined} alt={data.child.name} />
+                            <AvatarFallback className="p-1 bg-gray-100">
+                                <Image src={FallbackIcon} alt="Owoc" />
+                            </AvatarFallback>
+                        </Avatar>
+
+                        <div className="space-y-2 text-sm">
+                            <div className="flex justify-center gap-4">
+                                <div>
+                                    <span>Imię: </span>
+                                    <span className="font-bold">{data.child.name}</span>
+                                </div>
+                                <div>
+                                    <span>Wiek: </span>
+                                    <span className="font-bold">{data.child.age !== null ? `${data.child.age} lat` : 'B/D'}</span>
+                                </div>
+                            </div>
+                            {data.child.important_info && (
+                                <div>
+                                    <span>Ważne informacje: </span>
+                                    <span className="font-bold">{data.child.important_info}</span>
+                                </div>
+                            )}
                         </div>
-                        <LocationHandler scanId={data.scanId} />
+
+                        <p className="text-sm font-bold pt-2">
+                            Tatuaż został zeskanowany o: {new Date().toLocaleTimeString('pl-PL')}
+                        </p>
+
+                        <div className="border-2 rounded-md p-3 mt-3">
+                            <p className="font-bold">{data.parent.fullName}</p>
+                            <p className="text-sm text-muted-foreground">Nr. telefonu: {data.parent.phone || 'Nie podano'}</p>
+                        </div>
+
+                        {data.parent.phone && (
+                            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-lg font-bold py-6 rounded-lg">
+                                <a href={`tel:${data.parent.phone}`}><Phone className="mr-2 h-5 w-5"/> Zadzwoń do rodzica</a>
+                            </Button>
+                        )}
                     </CardContent>
+                    {/* POPRAWKA JEST TUTAJ: */}
+                    <CardFooter className="p-4 mx-auto">
+                        <LocationHandler scanId={data.scanId} />
+                    </CardFooter>
                 </Card>
             </div>
         );
-    } catch {
+    } catch (error) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-gray-100 p-4">
-                <Card className="w-full max-w-md text-center">
-                    <CardHeader><CardTitle className="text-2xl text-red-600">Błąd</CardTitle></CardHeader>
-                    <CardContent><p>Nie znaleziono aktywnego tatuażu dla podanego kodu lub kod jest nieprawidłowy.</p></CardContent>
+            <div className="flex items-center justify-center min-h-screen bg-gray-50 p-4">
+                <Card className="w-full max-w-md text-center shadow-lg rounded-xl">
+                    <CardContent className="p-6">
+                        <h1 className="text-xl font-semibold text-red-600">Błąd</h1>
+                        <p>Nie znaleziono aktywnego tatuażu dla podanego kodu lub kod jest nieprawidłowy.</p>
+                    </CardContent>
                 </Card>
             </div>
         );
