@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
@@ -142,5 +142,18 @@ export class AdminService {
                 price: data.price,
             },
         });
+    }
+
+    async getQrCodeContentForTattoo(tattooInstanceId: string): Promise<{ content: string; uniqueCode: string }> {
+        const tattoo = await this.prisma.tattoo_instances.findUnique({
+            where: { id: tattooInstanceId },
+        });
+
+        if (!tattoo) {
+            throw new NotFoundException('Nie znaleziono tatuażu o podanym ID.');
+        }
+
+        const qrContent = `${process.env.FRONTEND_URL}/t/${tattoo.unique_code}`;
+        return { content: qrContent, uniqueCode: tattoo.unique_code };
     }
 }

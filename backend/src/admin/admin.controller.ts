@@ -1,6 +1,7 @@
-import { Body, Controller, Get, Post, UseGuards, Param } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Param, Res } from '@nestjs/common';
 import { AdminGuard } from 'src/auth/guards/admin.guard';
 import { AdminService } from './admin.service';
+import { Response } from 'express';
 
 @UseGuards(AdminGuard)
 @Controller('admin')
@@ -51,5 +52,10 @@ export class AdminController {
     @Post('products')
     createProduct(@Body() body: { name: string, description?: string, price: number }) {
         return this.adminService.createProduct(body);
+    }
+
+    @Get('tattoos/:id/qr-content')
+    getTattooQrCodeContent(@Param('id') tattooId: string) {
+        return this.adminService.getQrCodeContentForTattoo(tattooId);
     }
 }

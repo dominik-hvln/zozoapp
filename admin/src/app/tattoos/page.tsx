@@ -5,15 +5,15 @@ import { api } from '@/lib/api';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import Papa from 'papaparse';
-
-// Import komponentów
+import { QRCodeSVG } from 'qrcode.react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { Download } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Download, QrCode } from 'lucide-react';
 
 // --- TYPY I FUNKCJE API ---
 interface Assignment {
@@ -35,7 +35,8 @@ const deactivateAssignment = async (id: string) => (await api.post(`/admin/assig
 // --- KOMPONENT ---
 export default function AdminTattoosPage() {
     const queryClient = useQueryClient();
-    const [codeCount, setCodeCount] = useState('50'); // Stan dla naszego pola input
+    const [codeCount, setCodeCount] = useState('50');
+    const [qrCodeData, setQrCodeData] = useState<{ code: string; content: string } | null>(null);
 
     const { data: assignments, isLoading: isLoadingAssignments } = useQuery({ queryKey: ['admin-assignments'], queryFn: getAssignments });
     const { data: newTattoos, isLoading: isLoadingNew } = useQuery({ queryKey: ['admin-new-tattoos'], queryFn: getNewTattoos });
@@ -45,7 +46,7 @@ export default function AdminTattoosPage() {
         onSuccess: (data) => {
             queryClient.invalidateQueries({ queryKey: ['admin-new-tattoos'] });
             toast.success(`Pomyślnie wygenerowano ${data.count} nowych kodów!`);
-            setCodeCount('50'); // Resetujemy stan
+            setCodeCount('50');
         },
         onError: () => toast.error('Wystąpił błąd podczas generowania kodów.'),
     });
@@ -85,6 +86,33 @@ export default function AdminTattoosPage() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    const handleShowQr = async (tattooId: string) => {
+        try {
+            const response = await api.get(`/admin/tattoos/${tattooId}/qr-content`);
+            setQrCodeData({
+                code: response.data.uniqueCode,
+                content: response.data.content
+            });
+        } catch (error) {
+            toast.error('Nie udało się pobrać danych do kodu QR.');
+        }
+    };
+
+    const handleDownloadSvg = () => {
+        if (!qrCodeData) return;
+        const svgEl = document.getElementById('qrcode-svg');
+        if (svgEl) {
+            const svgData = new XMLSerializer().serializeToString(svgEl);
+            const blob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `${qrCodeData.code}.svg`;
+            link.click();
+            URL.revokeObjectURL(url);
+        }
     };
 
     return (
@@ -135,16 +163,23 @@ export default function AdminTattoosPage() {
                             <TableRow>
                                 <TableHead>Kod Tatuażu</TableHead>
                                 <TableHead>Data Wygenerowania</TableHead>
+                                <TableHead className="text-right">Akcje</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>{
                             isLoadingNew ? (
-                                <TableRow><TableCell colSpan={2} className="text-center">Ładowanie...</TableCell></TableRow>
+                                <TableRow><TableCell colSpan={3} className="text-center">Ładowanie...</TableCell></TableRow>
                             ) : (
                                 newTattoos?.map((tattoo) => (
                                     <TableRow key={tattoo.id}>
                                         <TableCell className="font-mono">{tattoo.unique_code}</TableCell>
                                         <TableCell>{new Date(tattoo.created_at).toLocaleString('pl-PL')}</TableCell>
+                                        <TableCell className="text-right">
+                                            <Button variant="outline" size="sm" onClick={() => handleShowQr(tattoo.id)}>
+                                                <QrCode className="mr-2 h-4 w-4" />
+                                                Pokaż QR
+                                            </Button>
+                                        </TableCell>
                                     </TableRow>
                                 ))
                             )}
@@ -200,6 +235,29 @@ export default function AdminTattoosPage() {
                     </Table>
                 </CardContent>
             </Card>
+
+            <Dialog open={!!qrCodeData} onOpenChange={(isOpen) => !isOpen && setQrCodeData(null)}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Kod QR dla: <span className="font-mono">{qrCodeData?.code}</span></DialogTitle>
+                    </DialogHeader>
+                    <div className="p-4 bg-white">
+                        {qrCodeData && (
+                            <QRCodeSVG
+                                id="qrcode-svg"
+                                value={qrCodeData.content}
+                                size={256}
+                                level="H"
+                                className="mx-auto"
+                            />
+                        )}
+                    </div>
+                    <Button onClick={handleDownloadSvg}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Pobierz plik SVG
+                    </Button>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

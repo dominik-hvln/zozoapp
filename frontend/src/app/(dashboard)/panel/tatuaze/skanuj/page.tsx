@@ -1,6 +1,7 @@
 'use client';
 
 import { Scanner } from '@yudiel/react-qr-scanner';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,13 +9,26 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { IDetectedBarcode } from '@yudiel/react-qr-scanner';
 
 export default function SkanujPage() {
+    const router = useRouter();
 
     const handleScanSuccess = (result: IDetectedBarcode[]) => {
-        const scannedText = result[0].rawValue;
-        window.location.href = `/panel/tatuaze?kod=${scannedText}`;
+        const scannedUrl = result[0].rawValue;
+
+        try {
+            const url = new URL(scannedUrl);
+            const pathParts = url.pathname.split('/');
+            const uniqueCode = pathParts[pathParts.length - 1];
+
+            if (uniqueCode) {
+                router.push(`/panel/tatuaze?kod=${uniqueCode}`);
+            } else {
+                throw new Error("Nieprawidłowy format kodu QR.");
+            }
+        } catch (error) {
+            router.push(`/panel/tatuaze?kod=${scannedUrl}`);
+        }
     };
 
-    // POPRAWKA JEST TUTAJ
     const handleScanError = (error: unknown) => {
         if (error instanceof Error) {
             if (error.message.includes('No QR code found')) return;
@@ -41,13 +55,8 @@ export default function SkanujPage() {
                         <Scanner
                             onScan={handleScanSuccess}
                             onError={handleScanError}
-                            constraints={{
-                                facingMode: 'environment',
-                            }}
-                            components={{
-                                onOff: false,
-                                torch: false,
-                            }}
+                            constraints={{ facingMode: 'environment' }}
+                            components={{ onOff: false, torch: false }}
                         />
                     </div>
                     <div className='mt-4 flex justify-center'>
