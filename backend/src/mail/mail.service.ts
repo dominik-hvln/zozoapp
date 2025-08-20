@@ -12,7 +12,7 @@ export class MailService {
     ) {
         try {
             await this.resend.emails.send({
-                from: 'ZozoApp <onboarding@resend.dev>', // WAŻNE: Użyj domeny zweryfikowanej w Resend
+                from: 'ZozoApp <powiadomienia@zozoapp.pl>',
                 to: parentEmail,
                 subject: `Ważny alert: Ktoś zeskanował tatuaż Twojego dziecka ${childName}!`,
                 html: `
@@ -32,7 +32,7 @@ export class MailService {
     async sendWelcomeEmail(userEmail: string, userName: string) {
         try {
             await this.resend.emails.send({
-                from: 'ZozoApp <onboarding@resend.dev>', // Pamiętaj o zmianie na produkcyjną domenę
+                from: 'ZozoApp <powiadomienia@zozoapp.pl>',
                 to: userEmail,
                 subject: 'Witaj w ZozoApp! Twoje konto jest gotowe.',
                 html: `
