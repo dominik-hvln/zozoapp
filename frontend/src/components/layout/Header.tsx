@@ -76,13 +76,11 @@ export function Header() {
                     </div>
                 </div>
 
-                {/* Nawigacja na desktopie */}
                 <nav className="hidden md:flex items-center gap-2 bg-black/10 p-1 rounded-full">
                     <NavLinks />
                 </nav>
 
                 <div className="flex items-center gap-2">
-                    {/* Przyciski po prawej */}
                     <Link href="/panel/ustawienia">
                         <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/20 hover:text-white">
                             <Settings className="h-5 w-5" />

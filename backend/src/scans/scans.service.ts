@@ -47,7 +47,6 @@ export class ScansService {
             assignment.children.name,
         );
 
-        // POPRAWKA JEST TUTAJ:
         return {
             scanId: newScan.id,
             child: {
@@ -55,9 +54,10 @@ export class ScansService {
                 age: this.calculateAge(assignment.children.date_of_birth),
                 avatar_url: assignment.children.avatar_url,
                 important_info: assignment.children.important_info,
+                illnesses: assignment.children.illnesses,
+                allergies: assignment.children.allergies,
             },
             parent: {
-                // Łączymy imię i nazwisko, obsługując przypadki, gdy są puste
                 fullName: `${assignment.users.first_name || ''} ${assignment.users.last_name || ''}`.trim(),
                 phone: assignment.users.phone,
             }

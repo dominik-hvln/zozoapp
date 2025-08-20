@@ -20,7 +20,7 @@ export function QuickAccessBlock() {
                     </AvatarFallback>
                 </Avatar>
                 <div>
-                    <h2 className="text-xl font-bold">Witaj!</h2>
+                    <h2 className="text-xl font-bold">Witaj, {user.firstName || 'Użytkowniku'}!</h2>
                     <p className="text-sm text-muted-foreground">{user.email}</p>
                 </div>
             </div>

@@ -40,14 +40,14 @@ export default function SklepPage() {
     }
 
     return (
-        <div className="space-y-6">
-            <div>
+        <Card className="space-y-6">
+            <CardHeader>
                 <h1 className="text-3xl font-bold">Sklep</h1>
                 <p className="text-muted-foreground">Kup pakiety tatuaży, aby zapewnić bezpieczeństwo swoim dzieciom.</p>
-            </div>
+            </CardHeader>
 
             {isLoading ? <p>Ładowanie...</p> : error ? <p>Błąd...</p> : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                     {products?.map((product) => (
                         <Card key={product.id}>
                             <CardHeader>
@@ -64,8 +64,8 @@ export default function SklepPage() {
                             </CardContent>
                         </Card>
                     ))}
-                </div>
+                </CardContent>
             )}
-        </div>
+        </Card>
     );
 }

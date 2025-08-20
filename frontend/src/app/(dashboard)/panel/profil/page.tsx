@@ -4,19 +4,14 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import Link from 'next/link';
-
-// Import komponentów
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Plus, UserPlus } from 'lucide-react';
+import { UserPlus, Edit } from 'lucide-react';
 import Image from 'next/image';
-
-// Import awatarów
 import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
 
-// --- TYPY I API ---
 interface ProfileData {
     id: string;
     email: string;
@@ -45,11 +40,10 @@ export default function ProfilPage() {
 
     return (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            {/* Lewa kolumna */}
             <div className="space-y-6">
                 <Card>
                     <CardHeader className="items-center text-center justify-center">
-                        <Avatar className="w-24 h-24 mb-4">
+                        <Avatar className="w-24 h-24 mb-4 mx-auto">
                             <AvatarImage src="" alt="User avatar" />
                             <AvatarFallback className="text-3xl">{profile.first_name?.[0]}{profile.last_name?.[0]}</AvatarFallback>
                         </Avatar>
@@ -59,7 +53,9 @@ export default function ProfilPage() {
                         <p>Nr. telefonu: {profile.phone || 'Brak'}</p>
                         <p>Email: {profile.email}</p>
                         <div className="flex gap-2 justify-center pt-4">
-                            <Button>Edytuj profil</Button>
+                            <Button asChild className="bg-orange-500 hover:bg-orange-600">
+                                <Link href="/panel/profil/edytuj"><Edit className="mr-2 h-4 w-4"/>Edytuj profil</Link>
+                            </Button>
                             <Button variant="outline" onClick={logout}>Wyloguj się</Button>
                         </div>
                     </CardContent>
@@ -75,7 +71,6 @@ export default function ProfilPage() {
                 </Card>
             </div>
 
-            {/* Prawa kolumna */}
             <div className="space-y-6">
                 <Card>
                     <CardHeader><CardTitle>Opiekunowie</CardTitle></CardHeader>
@@ -110,7 +105,9 @@ export default function ProfilPage() {
                                             <p className="text-sm text-muted-foreground">{child._count.assignments} aktywnych tatuaży</p>
                                         </div>
                                     </div>
-                                    <Button>Edytuj profil</Button>
+                                    <Button asChild>
+                                        <Link href={`/panel/dzieci/${child.id}`}><Edit className="mr-2 h-4 w-4"/>Edytuj</Link>
+                                    </Button>
                                 </div>
                             );
                         })}

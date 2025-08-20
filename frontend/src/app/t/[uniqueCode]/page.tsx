@@ -1,12 +1,11 @@
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Phone } from "lucide-react";
+import { Phone, HeartPulse, ShieldAlert } from "lucide-react";
 import LocationHandler from "./LocationHandler";
 import Image from "next/image";
 import AppleIcon from '@/assets/avatars/apple.svg';
 
-// --- TYPY I FUNKCJE API (bez zmian) ---
 interface ScanData {
     scanId: string;
     child: {
@@ -14,6 +13,8 @@ interface ScanData {
         age: number | null;
         avatar_url: string | null;
         important_info: string | null;
+        illnesses: string | null;
+        allergies: string | null;
     };
     parent: {
         fullName: string;
@@ -30,10 +31,7 @@ async function getScanData(uniqueCode: string): Promise<ScanData> {
     return res.json();
 }
 
-// --- OSTATECZNY KOMPONENT STRONY ---
 export default async function ScanPage({ params }: { params: Promise<{ uniqueCode: string }> }) {
-    // OSTATECZNA POPRAWKA JEST TUTAJ:
-    // "Odczekujemy" na parametry, zanim ich użyjemy
     const { uniqueCode } = await params;
 
     try {
@@ -74,20 +72,36 @@ export default async function ScanPage({ params }: { params: Promise<{ uniqueCod
                                 </div>
                             )}
                         </div>
+                        {(data.child.illnesses || data.child.allergies) && (
+                            <div className="space-y-2 text-center mt-2">
+                                {data.child.illnesses && (
+                                    <p className="text-sm flex items-center justify-center text-center gap-2">
+                                        <HeartPulse className="h-4 w-4 mt-0.5 text-red-500 flex-shrink-0"/>
+                                        <strong>Choroby:</strong> {data.child.illnesses}
+                                    </p>
+                                )}
+                                {data.child.allergies && (
+                                    <p className="text-sm flex items-center justify-center gap-2">
+                                        <ShieldAlert className="h-4 w-4 mt-0.5 text-yellow-500 flex-shrink-0"/>
+                                        <strong>Alergie:</strong> {data.child.allergies}
+                                    </p>
+                                )}
+                            </div>
+                        )}
                         <p className="text-sm font-bold pt-2">
                             Tatuaż został zeskanowany o: {new Date().toLocaleTimeString('pl-PL')}
                         </p>
-                        <div className="border-2 rounded-md p-3 mt-3">
+                        <div className="border-1 rounded-md p-3 mt-3 bg-[#F5F7FC]">
                             <p className="font-bold">{data.parent.fullName}</p>
                             <p className="text-sm text-muted-foreground">Nr. telefonu: {data.parent.phone || 'Nie podano'}</p>
                         </div>
                         {data.parent.phone && (
-                            <Button asChild className="w-full bg-blue-600 hover:bg-blue-700 text-lg font-bold py-6 rounded-lg">
+                            <Button asChild className="w-full bg-[#466EC6] hover:bg-blue-700 text-lg font-bold py-6 rounded-lg">
                                 <a href={`tel:${data.parent.phone}`}><Phone className="mr-2 h-5 w-5"/> Zadzwoń do rodzica</a>
                             </Button>
                         )}
                     </CardContent>
-                    <CardFooter className="p-4 mx-auto">
+                    <CardFooter className="mx-auto">
                         <LocationHandler scanId={data.scanId} />
                     </CardFooter>
                 </Card>

@@ -28,15 +28,15 @@ export function QrCodesBlock({ assignments = [] }: QrCodesBlockProps) {
                         <Link href={`/panel/tatuaze`} key={assignment.id} className="text-center border rounded-lg p-3 hover:bg-gray-50">
                             <QrCode className="w-12 h-12 mx-auto text-muted-foreground" />
                             <p className="mt-2 text-xs font-mono">{assignment.tattoo_instances?.unique_code || 'B/D'}</p>
-                            <p className="text-xs text-muted-foreground">dla {assignment.children?.name || 'B/D'}</p>
+                            <p className="text-xs text-muted-foreground">Przypisany do: {assignment.children?.name || 'B/D'}</p>
                             <Badge variant={assignment.is_active ? 'default' : 'secondary'} className="mt-1">
                                 {assignment.is_active ? 'Aktywny' : 'Nieaktywny'}
                             </Badge>
                         </Link>
                     ))}
                     <Link href="/panel/tatuaze" className="flex flex-col items-center justify-center text-center p-3 border-2 border-dashed rounded-lg hover:bg-gray-50 min-h-[150px]">
-                        <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
-                            <PlusCircle className="h-6 w-6 text-blue-500" />
+                        <div className="w-20 h-20 rounded-full bg-blue-50 flex items-center justify-center">
+                            <PlusCircle className="h-8 w-8 text-blue-500" />
                         </div>
                         <p className="mt-2 text-sm font-medium text-blue-600">Zarządzaj</p>
                     </Link>

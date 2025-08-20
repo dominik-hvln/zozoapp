@@ -4,14 +4,13 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
-
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
@@ -57,27 +56,34 @@ export function LoginForm() {
     };
 
     return (
-        <Card className="w-full max-w-md">
+        <Card className="w-full max-w-lg px-16 z-999">
             <CardHeader>
-                <CardTitle>Witaj ponownie!</CardTitle>
-                <CardDescription>Zaloguj się, aby uzyskać dostęp do swojego panelu.</CardDescription>
+                <CardTitle className="text-center text-[26px]">Zaloguj się!</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-0">
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="space-y-2">
+                    <div className="space-y-2 mb-8">
                         <Label htmlFor="email">Email</Label>
-                        <Input id="email" type="email" placeholder="jan@kowalski.pl" {...register('email')} />
+                        <Input className='h-[50px]' id="email" type="email" placeholder="jan@kowalski.pl" {...register('email')} />
                         {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-2 mb-8">
                         <Label htmlFor="password">Hasło</Label>
-                        <Input id="password" type="password" {...register('password')} />
+                        <Input className='h-[50px]' id="password" type="password" {...register('password')} />
                         {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
                     </div>
-                    <Button type="submit" disabled={isSubmitting} className="w-full">
+                    <Button type="submit" disabled={isSubmitting} className="w-full h-[50px] bg-[#FFA800]">
                         {isSubmitting ? 'Logowanie...' : 'Zaloguj się'}
                     </Button>
                 </form>
+                <div className='text-center'>
+                    <p className="mt-4 text-sm">
+                        Nie masz jeszcze konta?
+                    </p>
+                    <Link href="/register" className="font-semibold text-blue-600 hover:underline">
+                        Zarejestruj się
+                    </Link>
+                </div>
             </CardContent>
         </Card>
     );

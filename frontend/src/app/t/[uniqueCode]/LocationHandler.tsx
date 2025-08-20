@@ -14,7 +14,6 @@ export default function LocationHandler({ scanId }: { scanId: string }) {
                 (position) => {
                     const { latitude, longitude } = position.coords;
                     setLocationStatus('success');
-                    // Wyślij lokalizację na serwer
                     api.post(`/scans/${scanId}/location`, { latitude, longitude });
                 },
                 () => setLocationStatus('error')
@@ -25,7 +24,7 @@ export default function LocationHandler({ scanId }: { scanId: string }) {
     }, [scanId]);
 
     return (
-        <div className="border-t pt-4 mt-4">
+        <div className="border-t pt-4">
             {locationStatus === 'pending' && <p className="text-sm text-muted-foreground flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin"/> Oczekiwanie na zgodę na lokalizację...</p>}
             {locationStatus === 'success' && <p className="text-sm text-green-600 font-semibold flex items-center justify-center gap-2"><MapPin className="h-4 w-4"/> Lokalizacja została wysłana do rodzica. Dziękujemy!</p>}
             {locationStatus === 'error' && <p className="text-sm text-red-500">Nie udało się pobrać lokalizacji.</p>}

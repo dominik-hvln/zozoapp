@@ -40,9 +40,7 @@ export default function PanelPage() {
                         <QrCodesBlock assignments={data?.recentAssignments} />
                     </div>
                     <div className="lg:col-span-1 space-y-6">
-                        <YourProfileBlock />
                         <ActivitiesBlock activities={data?.recentScans} onActivityClick={setSelectedScan} />
-                        <SettingsMenuBlock />
                     </div>
                 </div>
             </div>

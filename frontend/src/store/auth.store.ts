@@ -4,9 +4,11 @@ import { jwtDecode } from 'jwt-decode';
 
 interface UserPayload {
     sub: string;
+    name: string;
     email: string;
     role: 'USER' | 'ADMIN';
     status: 'TRIAL' | 'ACTIVE' | 'BLOCKED';
+    firstName: string | null;
 }
 
 interface AuthState {

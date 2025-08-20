@@ -7,8 +7,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import Image from 'next/image';
-
-// Import komponentów
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,13 +20,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
-
-// Import awatarów
 import AppleIcon from '@/assets/avatars/apple.svg';
 import BananaIcon from '@/assets/avatars/lemon.svg';
 import StrawberryIcon from '@/assets/avatars/strawberry.svg';
 
-// --- TYPY I FUNKCJE API ---
 interface Child {
     id: string;
     name: string;
@@ -43,8 +39,6 @@ const addChild = async (data: Partial<Child>) => (await api.post('/children', da
 const updateChild = async ({ id, data }: { id: string, data: Partial<Child> }) => (await api.put(`/children/${id}`, data)).data;
 const deleteChild = async (id: string) => (await api.delete(`/children/${id}`)).data;
 
-
-// --- KOMPONENT ---
 export default function DzieciPage() {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [editingChild, setEditingChild] = useState<Child | null>(null);
@@ -119,11 +113,11 @@ export default function DzieciPage() {
     const getFallbackAvatar = (id: string) => fruitAvatars[id.charCodeAt(0) % fruitAvatars.length];
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <Card className="space-y-6">
+            <CardHeader className="flex items-center justify-between mb-0">
                 <h1 className="text-3xl font-bold">Twoje Dzieci</h1>
                 <Button onClick={openNewDialog}><PlusCircle className="mr-2 h-4 w-4" />Dodaj Dziecko</Button>
-            </div>
+            </CardHeader>
 
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent className="sm:max-w-[425px]">
@@ -176,7 +170,7 @@ export default function DzieciPage() {
                 </DialogContent>
             </Dialog>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                 {isLoading ? <p>Ładowanie...</p> : children?.map((child) => {
                     const FallbackIcon = getFallbackAvatar(child.id);
                     return (
@@ -217,7 +211,7 @@ export default function DzieciPage() {
                         </div>
                     )
                 })}
-            </div>
-        </div>
+            </CardContent>
+        </Card>
     );
 }
