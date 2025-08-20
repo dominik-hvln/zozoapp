@@ -24,18 +24,19 @@ model children {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model users {
-  id               String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  email            String        @unique
-  password_hash    String
-  first_name       String?
-  created_at       DateTime      @default(now()) @db.Timestamptz(6)
-  phone            String?
-  role             String        @default("USER")
-  last_name        String?
-  trial_expires_at DateTime?     @db.Timestamptz(6)
-  account_status   String        @default("TRIAL")
-  assignments      assignments[]
-  children         children[]
+  id                 String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email              String        @unique
+  password_hash      String
+  first_name         String?
+  created_at         DateTime      @default(now()) @db.Timestamptz(6)
+  phone              String?
+  role               String        @default("USER")
+  last_name          String?
+  trial_expires_at   DateTime?     @db.Timestamptz(6)
+  account_status     String        @default("TRIAL")
+  stripe_customer_id String?
+  assignments        assignments[]
+  children           children[]
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments

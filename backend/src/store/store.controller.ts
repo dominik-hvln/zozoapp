@@ -23,4 +23,10 @@ export class StoreController {
     createPaymentCheckout(@Request() req, @Body() body: { items: { priceId: string, quantity: number }[] }) {
         return this.storeService.createOneTimePaymentCheckoutSession(body.items, req.user.userId);
     }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('customer-portal')
+    createCustomerPortal(@Request() req) {
+        return this.storeService.createCustomerPortalSession(req.user.userId);
+    }
 }

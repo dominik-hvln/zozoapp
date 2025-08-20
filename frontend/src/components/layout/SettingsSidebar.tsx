@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 const settingsLinks = [
     { href: "/panel/ustawienia", label: "Powiadomienia i preferencje" },
     { href: "/panel/ustawienia/bezpieczenstwo", label: "Bezpieczeństwo" },
+    { href: "/panel/ustawienia/subskrypcja", label: "Subskrypcje i Płatności" },
     { href: "/panel/ustawienia/informacje", label: "Informacje o aplikacji" },
 ];
 

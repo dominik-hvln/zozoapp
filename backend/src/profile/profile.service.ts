@@ -16,6 +16,8 @@ export class ProfileService {
                 last_name: true,
                 phone: true,
                 created_at: true,
+                account_status: true,
+                trial_expires_at: true,
                 children: {
                     include: {
                         _count: {
@@ -35,9 +37,20 @@ export class ProfileService {
             throw new NotFoundException('Profil nie znaleziony.');
         }
 
-        // W przyszłości dodamy tu logikę do pobierania skanów i subskrypcji
         const scansCount = 0;
-        const subscriptionStatus = 'Standard';
+        let subscriptionStatus = 'Nieznany';
+        switch (user.account_status) {
+            case 'ACTIVE':
+                subscriptionStatus = 'Standard (Aktywny)';
+                break;
+            case 'TRIAL':
+                subscriptionStatus = 'Okres próbny';
+                break;
+
+            case 'BLOCKED':
+                subscriptionStatus = 'Wygasł / Zablokowany';
+                break;
+        }
 
         return { ...user, scansCount, subscriptionStatus };
     }

@@ -98,7 +98,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <Header />
                     <main className="container mx-auto flex-1 overflow-y-auto py-8 px-4 md:px-0 relative">
                         {isAccountBlocked && (
-                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
+                            <div className="absolute inset-0 backdrop-blur-sm z-10 flex items-center justify-center">
                                 <div className="text-center p-6 border rounded-lg bg-white shadow-xl max-w-sm">
                                     <h2 className="text-xl font-bold">Twoje konto wygasło</h2>
                                     <p className="text-muted-foreground mt-2">Wykup subskrypcję, aby odblokować pełen dostęp.</p>

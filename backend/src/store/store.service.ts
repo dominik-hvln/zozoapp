@@ -16,7 +16,6 @@ export class StoreService {
         });
     }
 
-    // Twoja istniejąca metoda - pozostaje bez zmian
     getAvailableProducts() {
         return this.prisma.products.findMany({
             where: { is_active: true },
@@ -64,7 +63,6 @@ export class StoreService {
             where: { stripe_price_id: { in: priceIds } },
         });
 
-        // Filtrujemy, aby mieć pewność, że każdy produkt ma priceId i jest poprawny
         const validProducts = productsInDb.filter(p => p.stripe_price_id);
         if (validProducts.length !== items.length) {
             throw new InternalServerErrorException('Niektóre produkty w koszyku są nieprawidłowe lub niedostępne.');
@@ -73,7 +71,7 @@ export class StoreService {
         const line_items = validProducts.map(product => {
             const item = items.find(i => i.priceId === product.stripe_price_id);
             return {
-                price: product.stripe_price_id!, // Używamy '!', bo jesteśmy pewni, że nie jest null
+                price: product.stripe_price_id!,
                 quantity: item?.quantity || 1,
             };
         });
@@ -84,7 +82,7 @@ export class StoreService {
 
         const session = await this.stripe.checkout.sessions.create({
             ui_mode: 'hosted',
-            mode: 'payment', // Tryb jednorazowej płatności
+            mode: 'payment',
             client_reference_id: userId,
             customer_email: user.email,
             line_items: line_items,
@@ -93,5 +91,19 @@ export class StoreService {
         });
 
         return session;
+    }
+
+    async createCustomerPortalSession(userId: string) {
+        const user = await this.prisma.users.findUnique({ where: { id: userId } });
+
+        if (!user || !user.stripe_customer_id) {
+            throw new NotFoundException('Nie znaleziono danych subskrypcji dla tego użytkownika.');
+        }
+
+        const portalSession = await this.stripe.billingPortal.sessions.create({
+            customer: user.stripe_customer_id,
+            return_url: `${process.env.FRONTEND_URL}/panel/ustawienia/subskrypcja`,
+        });
+        return portalSession;
     }
 }
