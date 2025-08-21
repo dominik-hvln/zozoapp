@@ -124,7 +124,7 @@ export default function SklepPage() {
                         <div className="space-y-2">
                             <Label>Kategorie (wkrótce)</Label>
                             <div className="flex items-center space-x-2 opacity-50">
-                                <Checkbox id="seria-owoce" disabled /><Label htmlFor="seria-owoce" className="font-normal">Seria "Owoce"</Label>
+                                <Checkbox id="seria-owoce" disabled /><Label htmlFor="seria-owoce" className="font-normal">Seria Owoce</Label>
                             </div>
                         </div>
                     </CardContent>
