@@ -70,11 +70,11 @@ function ProductCard({ product }: { product: Product }) {
     }
 
     return (
-        <Card className="flex flex-row py-2 px-4">
-            <CardHeader className="p-0 w-49">
-                <Image src={image} alt={product.name} className="w-full h-48 object-contain rounded-t-lg" />
+        <Card className="flex flex-col md:flex-row p-4">
+            <CardHeader className="p-0 w-full md:w-49 md:min-w-49">
+                <Image src={image} alt={product.name} className="w-full h-30 md:h-48 object-contain rounded-t-lg" />
             </CardHeader>
-            <CardContent className="p-4 pr-0 flex flex-col flex-grow">
+            <CardContent className="p-0 flex flex-col flex-grow">
                 <CardTitle className="text-lg">{product.name}</CardTitle>
                 <CardDescription className="text-xs mt-1">{product.description}</CardDescription>
                 <div className="mt-4 flex-grow">
@@ -116,54 +116,58 @@ export default function SklepPage() {
     });
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-            <aside className="lg:col-span-1 sticky top-20">
-                <Card>
-                    <CardHeader><CardTitle>Filtry</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="space-y-2">
-                            <Label>Kategorie (wkrótce)</Label>
-                            <div className="flex items-center space-x-2 opacity-50">
-                                <Checkbox id="seria-owoce" disabled /><Label htmlFor="seria-owoce" className="font-normal">Seria Owoce</Label>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </aside>
-
-            <main className="lg:col-span-3">
-                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mb-6">
-                    <div className="relative w-full sm:max-w-xs">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input type="search" placeholder="Szukaj produktów..." className="pl-8 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                    </div>
-                    <div className="flex items-center gap-4 w-full sm:w-auto">
-                        <Select value={sortBy} onValueChange={setSortBy}>
-                            <SelectTrigger className="w-full sm:w-[160px]"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="name-asc">Sortuj: Nazwa A-Z</SelectItem>
-                                <SelectItem value="name-desc">Sortuj: Nazwa Z-A</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <ToggleGroup type="single" value={viewMode} onValueChange={(value) => { if(value) setViewMode(value) }}>
+        <Card>
+            <CardContent>
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+                    <aside className="lg:col-span-1 sticky">
+                        <ToggleGroup className="mb-6" type="single" value={viewMode} onValueChange={(value) => { if(value) setViewMode(value) }}>
                             <ToggleGroupItem value="grid"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
                             <ToggleGroupItem value="list"><List className="h-4 w-4" /></ToggleGroupItem>
                         </ToggleGroup>
-                    </div>
-                </div>
+                        <Card>
+                            <CardHeader><CardTitle>Filtry</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label>Kategorie (wkrótce)</Label>
+                                    <div className="flex items-center space-x-2 opacity-50">
+                                        <Checkbox id="seria-owoce" disabled /><Label htmlFor="seria-owoce" className="font-normal">Seria Owoce</Label>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </aside>
 
-                {isLoading ? <p>Ładowanie...</p> : error ? <p>Błąd.</p> : (
-                    viewMode === 'grid' ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {products?.map((product) => <ProductCard key={product.id} product={product} />)}
+                    <main className="lg:col-span-3">
+                        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mb-6">
+                            <div className="relative w-full sm:max-w-xs">
+                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                                <Input type="search" placeholder="Szukaj produktów..." className="pl-8 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                            </div>
+                            <div className="flex items-center gap-4 w-full sm:w-auto">
+                                <Select value={sortBy} onValueChange={setSortBy}>
+                                    <SelectTrigger className="w-full sm:w-[200px]"><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="name-asc">Sortuj: Nazwa A-Z</SelectItem>
+                                        <SelectItem value="name-desc">Sortuj: Nazwa Z-A</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
-                    ) : (
-                        <div className="space-y-4">
-                            {products?.map((product) => <ProductCard key={product.id} product={product} />)}
-                        </div>
-                    )
-                )}
-            </main>
-        </div>
+
+                        {isLoading ? <p>Ładowanie...</p> : error ? <p>Błąd.</p> : (
+                            viewMode === 'grid' ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {products?.map((product) => <ProductCard key={product.id} product={product} />)}
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {products?.map((product) => <ProductCard key={product.id} product={product} />)}
+                                </div>
+                            )
+                        )}
+                    </main>
+                </div>
+            </CardContent>
+        </Card>
     );
 }
