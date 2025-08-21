@@ -71,7 +71,7 @@ export class ProfileService {
         if (!user) { throw new UnauthorizedException('Użytkownik nie istnieje.'); }
         const isPasswordMatching = await bcrypt.compare(oldPass, user.password_hash);
         if (!isPasswordMatching) { throw new UnauthorizedException('Stare hasło jest nieprawidłowe.'); }
-        const newHashedPassword = await bcrypt.hash(newPass, 10);
+        const newHashedPassword = await bcrypt.hash(newPass, 12);
         return this.prisma.users.update({
             where: { id: userId },
             data: { password_hash: newHashedPassword },

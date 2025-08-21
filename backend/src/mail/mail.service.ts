@@ -48,4 +48,25 @@ export class MailService {
             console.error('Błąd podczas wysyłania e-maila powitalnego:', error);
         }
     }
+
+    async sendPasswordResetEmail(userEmail: string, resetLink: string) {
+        try {
+            await this.resend.emails.send({
+                from: 'ZozoApp <powiadomienia@zozoapp.pl>',
+                to: userEmail,
+                subject: 'Resetowanie hasła w ZozoApp',
+                html: `
+          <h1>Cześć,</h1>
+          <p>Otrzymaliśmy prośbę o zresetowanie hasła dla Twojego konta. Kliknij w poniższy link, aby ustawić nowe hasło:</p>
+          <a href="${resetLink}">Ustaw nowe hasło</a>
+          <p>Link jest ważny przez 1 godzinę.</p>
+          <p>Jeśli nie prosiłeś/aś o zmianę hasła, zignoruj tę wiadomość.</p>
+          <p>Pozdrawiamy, Zespół ZozoApp</p>
+        `,
+            });
+        } catch (error) {
+            console.error('Błąd podczas wysyłania e-maila resetującego hasło:', error);
+            throw error;
+        }
+    }
 }

@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 import {
     Card,
     CardContent,
@@ -40,18 +41,11 @@ export function LoginForm() {
         try {
             const response = await api.post('/auth/login', data);
             const { access_token } = response.data;
-
             setToken(access_token);
-
-            console.log('Logowanie pomyślne!', access_token);
-            alert('Logowanie pomyślne! Zostaniesz przekierowany do panelu.');
-
-            // Przekieruj użytkownika do panelu
+            toast.success('Logowanie pomyślne!');
             router.push('/panel');
-
         } catch (error) {
-            console.error('Błąd logowania:', error);
-            alert('Nieprawidłowy email lub hasło.');
+            toast.error('Błąd logowania:', { description: 'Nieprawidłowy email lub hasło.' });
         }
     };
 
@@ -67,10 +61,17 @@ export function LoginForm() {
                         <Input className='h-[50px]' id="email" type="email" placeholder="jan@kowalski.pl" {...register('email')} />
                         {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
                     </div>
-                    <div className="space-y-2 mb-8">
+                    <div className="space-y-2 mb-1">
                         <Label htmlFor="password">Hasło</Label>
                         <Input className='h-[50px]' id="password" type="password" {...register('password')} />
                         {errors.password && <p className="text-sm text-red-500">{errors.password.message}</p>}
+                    </div>
+                    <div>
+                        <Link href="/forgot-password" passHref>
+                            <Button variant="link" className="px-0 pt-0 text-sm h-auto">
+                                Nie pamiętasz hasła?
+                            </Button>
+                        </Link>
                     </div>
                     <Button type="submit" disabled={isSubmitting} className="w-full h-[50px] bg-[#FFA800]">
                         {isSubmitting ? 'Logowanie...' : 'Zaloguj się'}

@@ -29,4 +29,14 @@ export class AuthController {
     refreshSession(@Request() req) {
         return this.authService.refreshSession(req.user.userId);
     }
+
+    @Post('forgot-password')
+    forgotPassword(@Body('email') email: string) {
+        return this.authService.forgotPassword(email);
+    }
+
+    @Post('reset-password')
+    resetPassword(@Body() body: { token: string; newPass: string }) {
+        return this.authService.resetPassword(body.token, body.newPass);
+    }
 }
