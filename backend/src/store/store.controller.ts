@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Request, UseGuards, Body } from '@nestjs/common';
+import { Controller, Get, Post, Request, UseGuards, Body, Query } from '@nestjs/common';
 import { StoreService } from './store.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
@@ -8,8 +8,12 @@ export class StoreController {
 
     @UseGuards(JwtAuthGuard)
     @Get('products')
-    getProducts() {
-        return this.storeService.getAvailableProducts();
+    getProducts(
+        @Query('search') searchTerm?: string,
+        @Query('sortBy') sortBy?: 'price' | 'name',
+        @Query('sortOrder') sortOrder?: 'asc' | 'desc'
+    ) {
+        return this.storeService.getAvailableProducts(searchTerm, sortBy, sortOrder);
     }
 
     @UseGuards(JwtAuthGuard)

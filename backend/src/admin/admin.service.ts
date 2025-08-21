@@ -2,10 +2,20 @@ import { Injectable, NotFoundException, InternalServerErrorException } from '@ne
 import { PrismaService } from 'src/prisma/prisma.service';
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
+import Stripe from 'stripe';
 
 @Injectable()
 export class AdminService {
-    constructor(private prisma: PrismaService) {}
+    private stripe: Stripe;
+    constructor(private prisma: PrismaService) {
+        const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+        if (!stripeSecretKey) {
+            throw new InternalServerErrorException('Stripe secret key is not configured.');
+        }
+        this.stripe = new Stripe(stripeSecretKey, {
+            apiVersion: '2025-07-30.basil',
+        });
+    }
 
     getAllUsers() {
         return this.prisma.users.findMany({
@@ -131,16 +141,48 @@ export class AdminService {
     getAllProducts() {
         return this.prisma.products.findMany({
             orderBy: { created_at: 'desc' },
+            include: { product_variants: true },
         });
     }
 
-    createProduct(data: { name: string, description?: string, price: number }) {
+    async createProduct(data: { name: string, description?: string }) {
+        // Krok 1: Stwórz produkt w Stripe
+        const stripeProduct = await this.stripe.products.create({
+            name: data.name,
+            description: data.description,
+        });
+
+        // Krok 2: Zapisz produkt w naszej bazie danych razem z ID ze Stripe
         return this.prisma.products.create({
             data: {
                 name: data.name,
                 description: data.description,
-                price: data.price,
+                stripe_product_id: stripeProduct.id,
             },
+        });
+    }
+
+    async addVariantToProduct(productId: string, data: { quantity: number; price: number; }) {
+        const product = await this.prisma.products.findUnique({ where: { id: productId } });
+        if (!product || !product.stripe_product_id) {
+            throw new NotFoundException('Produkt nie istnieje lub nie jest zsynchronizowany ze Stripe.');
+        }
+
+        // Krok 1: Stwórz nową cenę w Stripe powiązaną z produktem
+        const stripePrice = await this.stripe.prices.create({
+            product: product.stripe_product_id,
+            unit_amount: data.price, // Cena w groszach
+            currency: 'pln',
+        });
+
+        // Krok 2: Zapisz wariant w naszej bazie z ID ceny ze Stripe
+        return this.prisma.product_variants.create({
+            data: {
+                product_id: productId,
+                quantity: data.quantity,
+                price: data.price,
+                stripe_price_id: stripePrice.id,
+            }
         });
     }
 

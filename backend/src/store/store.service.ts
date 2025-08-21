@@ -1,6 +1,7 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import Stripe from 'stripe';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class StoreService {
@@ -16,10 +17,27 @@ export class StoreService {
         });
     }
 
-    getAvailableProducts() {
+    async getAvailableProducts(
+        searchTerm?: string,
+        sortBy: 'price' | 'name' = 'name',
+        sortOrder: 'asc' | 'desc' = 'asc'
+    ) {
+        const where: Prisma.productsWhereInput = {
+            is_active: true,
+        };
+
+        if (searchTerm) {
+            where.name = { contains: searchTerm, mode: 'insensitive' };
+        }
+
         return this.prisma.products.findMany({
-            where: { is_active: true },
-            orderBy: { created_at: 'asc' },
+            where,
+            include: {
+                product_variants: {
+                    orderBy: { quantity: 'asc' },
+                },
+            },
+            orderBy: { [sortBy]: sortOrder },
         });
     }
 
@@ -59,19 +77,20 @@ export class StoreService {
         }
 
         const priceIds = items.map(item => item.priceId);
-        const productsInDb = await this.prisma.products.findMany({
+
+        // Szukamy wariantów po ich stripe_price_id
+        const variantsInDb = await this.prisma.product_variants.findMany({
             where: { stripe_price_id: { in: priceIds } },
         });
 
-        const validProducts = productsInDb.filter(p => p.stripe_price_id);
-        if (validProducts.length !== items.length) {
-            throw new InternalServerErrorException('Niektóre produkty w koszyku są nieprawidłowe lub niedostępne.');
+        if (variantsInDb.length !== items.length) {
+            throw new InternalServerErrorException('Niektóre produkty w koszyku są nieprawidłowe.');
         }
 
-        const line_items = validProducts.map(product => {
-            const item = items.find(i => i.priceId === product.stripe_price_id);
+        const line_items = variantsInDb.map(variant => {
+            const item = items.find(i => i.priceId === variant.stripe_price_id);
             return {
-                price: product.stripe_price_id!,
+                price: variant.stripe_price_id,
                 quantity: item?.quantity || 1,
             };
         });

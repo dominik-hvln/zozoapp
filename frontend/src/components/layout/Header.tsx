@@ -52,6 +52,7 @@ function NavLinks() {
 export function Header() {
     const pathname = usePathname();
     const { user, logout } = useAuthStore();
+    const itemsInCart = useCartStore((state) => state.items.length);
     const notificationCount = 1;
 
     // Prosta funkcja do formatowania daty
@@ -81,6 +82,16 @@ export function Header() {
                 </nav>
 
                 <div className="flex items-center gap-2">
+                    <Link href="/panel/koszyk">
+                        <Button variant="ghost" size="icon" className="relative rounded-full text-white hover:bg-white/20 hover:text-white">
+                            <ShoppingCart className="h-5 w-5" />
+                            {itemsInCart > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                                    {itemsInCart}
+                                </span>
+                            )}
+                        </Button>
+                    </Link>
                     <Link href="/panel/ustawienia">
                         <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/20 hover:text-white">
                             <Settings className="h-5 w-5" />

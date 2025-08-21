@@ -54,6 +54,11 @@ export class AdminController {
         return this.adminService.createProduct(body);
     }
 
+    @Post('products/:id/variants')
+    addVariant(@Param('id') productId: string, @Body() body: { quantity: number; price: number; }) {
+        return this.adminService.addVariantToProduct(productId, body);
+    }
+
     @Get('tattoos/:id/qr-content')
     getTattooQrCodeContent(@Param('id') tattooId: string) {
         return this.adminService.getQrCodeContentForTattoo(tattooId);

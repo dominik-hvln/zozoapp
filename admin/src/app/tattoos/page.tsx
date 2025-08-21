@@ -141,7 +141,7 @@ export default function AdminTattoosPage() {
 
         try {
             const zip = new JSZip();
-            const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.zozoapp.pl/login';
+            const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://app.zozoapp.pl/';
             const selectedTattoos = newTattoos?.filter(t => selectedIds.includes(t.id)) || [];
 
             for (const tattoo of selectedTattoos) {

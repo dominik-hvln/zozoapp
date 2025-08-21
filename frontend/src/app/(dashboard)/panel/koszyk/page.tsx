@@ -1,10 +1,10 @@
 'use client';
 
 import { useCartStore } from '@/store/cart.store';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-import { StaticImageData } from 'next/image'; // Import do typowania obrazków
+import { StaticImageData } from 'next/image';
 
 // Import komponentów
 import { Button } from '@/components/ui/button';
@@ -16,11 +16,11 @@ import { Separator } from '@/components/ui/separator';
 import { Trash2 } from 'lucide-react';
 import Image from 'next/image';
 
-// Import awatarów
+// Import awatarów - dostosuj do swoich plików
 import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
 
-// POPRAWKA: Definiujemy poprawny typ dla obiektu z obrazkami
+// Mapowanie nazw produktów na obrazki
 const productImages: { [key: string]: StaticImageData } = {
     'Zestaw 5 Tatuaży ZozoApp': AppleIcon,
     'Inny Produkt': LemonIcon,
@@ -29,16 +29,19 @@ const productImages: { [key: string]: StaticImageData } = {
 
 export default function KoszykPage() {
     const { items, removeItem, updateItemQuantity, clearCart } = useCartStore();
+    const queryClient = useQueryClient();
 
+    // Logika obliczeń
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const shippingCost = subtotal > 10000 ? 0 : 999;
+    const shippingCost = subtotal > 10000 ? 0 : 999; // Darmowa dostawa powyżej 100 zł
     const total = subtotal + shippingCost;
     const amountToFreeShipping = 10000 - subtotal;
 
+    // Mutacja do tworzenia sesji płatności jednorazowej
     const checkoutMutation = useMutation({
         mutationFn: (cartItems: { priceId: string, quantity: number }[]) => api.post('/store/checkout/payment', { items: cartItems }),
         onSuccess: (response) => {
-            clearCart();
+            clearCart(); // Czyścimy koszyk po pomyślnym utworzeniu sesji
             window.location.href = response.data.url;
         },
         onError: () => toast.error('Wystąpił błąd podczas przechodzenia do płatności.'),
@@ -59,6 +62,7 @@ export default function KoszykPage() {
                 <p>Twój koszyk jest pusty.</p>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+                    {/* Lewa kolumna: Lista produktów */}
                     <div className="lg:col-span-2 space-y-4">
                         {items.map(item => (
                             <Card key={item.id} className="flex items-center p-4 gap-4">
@@ -67,12 +71,14 @@ export default function KoszykPage() {
                                     <h3 className="font-semibold">{item.name}</h3>
                                     <p className="text-sm text-muted-foreground">Tatuaż z serii Owoce, trwałość do 5 dni.</p>
                                 </div>
-                                <div className="flex items-center gap-4">
+                                <div className="flex items-center gap-4 flex-wrap">
                                     <Select
                                         value={String(item.quantity)}
                                         onValueChange={(value) => updateItemQuantity(item.id, Number(value))}
                                     >
-                                        <SelectTrigger className="w-20"><SelectValue /></SelectTrigger>
+                                        <SelectTrigger className="w-20">
+                                            <SelectValue />
+                                        </SelectTrigger>
                                         <SelectContent>
                                             {[...Array(10).keys()].map(i => <SelectItem key={i + 1} value={String(i + 1)}>{i + 1}</SelectItem>)}
                                         </SelectContent>
@@ -86,6 +92,7 @@ export default function KoszykPage() {
                         ))}
                     </div>
 
+                    {/* Prawa kolumna: Podsumowanie */}
                     <div className="lg:col-span-1">
                         <Card>
                             <CardHeader><CardTitle>Podsumowanie zamówienia</CardTitle></CardHeader>
