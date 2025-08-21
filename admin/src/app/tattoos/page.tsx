@@ -141,13 +141,13 @@ export default function AdminTattoosPage() {
 
         try {
             const zip = new JSZip();
-            const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://zozoapp.vercel.app';
+            const frontendUrl = process.env.NEXT_PUBLIC_FRONTEND_URL || 'https://www.zozoapp.pl/login';
             const selectedTattoos = newTattoos?.filter(t => selectedIds.includes(t.id)) || [];
 
             for (const tattoo of selectedTattoos) {
                 const qrContent = `${frontendUrl}/t/${tattoo.unique_code}`;
                 const svgString = ReactDOMServer.renderToStaticMarkup(
-                    <QRCodeSVG value={qrContent} size={256} level="H" />
+                    <QRCodeSVG value={qrContent} size={256} level="M" />
                 );
                 zip.file(`${tattoo.unique_code}.svg`, svgString);
             }
@@ -305,7 +305,7 @@ export default function AdminTattoosPage() {
                                 id="qrcode-svg"
                                 value={qrCodeData.content}
                                 size={256}
-                                level="H"
+                                level="M"
                                 className="mx-auto"
                             />
                         )}
