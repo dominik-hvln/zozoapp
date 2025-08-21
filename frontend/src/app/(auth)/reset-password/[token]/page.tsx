@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { AxiosError } from 'axios';
 
 const schema = z.object({
     newPass: z.string().min(8, 'Hasło musi mieć co najmniej 8 znaków.'),
@@ -29,7 +30,10 @@ export default function ResetPasswordPage() {
             toast.success('Sukces!', { description: data.data.message });
             router.push('/login');
         },
-        onError: (error: any) => toast.error('Błąd', { description: error.response?.data?.message || 'Wystąpił błąd.' }),
+        onError: (error: AxiosError) => {
+            const errorMessage = (error.response?.data as { message: string })?.message || 'Wystąpił błąd.';
+            toast.error('Błąd', { description: errorMessage });
+        },
     });
 
     return (
