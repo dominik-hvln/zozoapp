@@ -12,6 +12,11 @@ export class OrdersController {
         return this.ordersService.processSuccessfulOrder(sessionId, req.user.userId);
     }
 
+    @Get('by-session/:sessionId')
+    getOrderBySession(@Param('sessionId') sessionId: string, @Request() req) {
+        return this.ordersService.getOrderBySessionId(sessionId, req.user.userId);
+    }
+
     @Get(':id')
     getOrder(@Param('id') orderId: string, @Request() req) {
         return this.ordersService.getOrderDetails(orderId, req.user.userId);

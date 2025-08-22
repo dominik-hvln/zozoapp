@@ -71,14 +71,13 @@ export class MailService {
     }
 
     async sendOrderConfirmationEmail(userEmail: string, orderDetails: any) {
-        // Prosta pętla do generowania listy produktów w HTML
         const productListHtml = orderDetails.order_items.map((item: any) =>
-            `<li>${item.products.name} (Wariant: ${item.product_variants.quantity} szt.) x ${item.quantity} - <strong>${(item.price / 100).toFixed(2)} zł</strong></li>`
+            `<li>${item.product_variants?.products?.name || 'Nazwa produktu niedostępna'} (Wariant: ${item.product_variants?.quantity} szt.) x ${item.quantity} - <strong>${(item.price / 100).toFixed(2)} zł</strong></li>`
         ).join('');
 
         try {
             await this.resend.emails.send({
-                from: 'ZozoApp <zamowienia@zozoapp.pl>', // Użyj swojej zweryfikowanej domeny
+                from: 'ZozoApp <powiadomienia@zozoapp.pl>', // Pamiętaj o zmianie na produkcyjną domenę
                 to: userEmail,
                 subject: `Potwierdzenie zamówienia nr ${orderDetails.id}`,
                 html: `
@@ -90,9 +89,9 @@ export class MailService {
           <p>Pozdrawiamy, Zespół ZozoApp</p>
         `,
             });
-            console.log(`Wysłano potwierdzenie zamówienia nr ${orderDetails.id} na adres ${userEmail}`);
+            console.log(`[MAIL] Wysłano potwierdzenie zamówienia nr ${orderDetails.id} na adres ${userEmail}`);
         } catch (error) {
-            console.error('Błąd podczas wysyłania potwierdzenia zamówienia:', error);
+            console.error('[MAIL BŁĄD] Nie udało się wysłać potwierdzenia zamówienia:', error);
         }
     }
 }

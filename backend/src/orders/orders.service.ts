@@ -62,20 +62,20 @@ export class OrdersService {
     getOrderDetails(orderId: string, userId: string) {
         return this.prisma.orders.findFirst({
             where: { id: orderId, user_id: userId },
-            include: {
-                // POPRAWKA: Poprawna ścieżka do nazwy produktu
-                order_items: {
-                    include: {
-                        product_variants: {
-                            include: {
-                                products: {
-                                    select: { name: true }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            include: { order_items: { include: { product_variants: { include: { products: true } } } } }
         });
+    }
+
+    async getOrderBySessionId(sessionId: string, userId: string) {
+        const order = await this.prisma.orders.findFirst({
+            where: {
+                stripe_checkout_id: sessionId,
+                user_id: userId,
+            },
+        });
+        if (!order) {
+            throw new NotFoundException('Nie znaleziono zamówienia dla podanej sesji.');
+        }
+        return order;
     }
 }
