@@ -7,19 +7,20 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PartyPopper } from 'lucide-react';
 
-// Ta funkcja jest wywoływana tylko raz, aby potwierdzić zamówienie
-const confirmOrder = async (sessionId: string) => (await api.post('/orders/success', { sessionId })).data;
+// Zmieniamy funkcję: teraz pobiera dane, a nie tworzy
+const getOrderBySessionId = async (sessionId: string) => (await api.get(`/orders/by-session/${sessionId}`)).data;
 
 export default function OrderSummaryPage() {
     const params = useParams();
     const sessionId = params.sessionId as string;
 
-    // Używamy useQuery, ale wywołujemy je tylko raz
-    const { data: order, isLoading, isSuccess } = useQuery({
-        queryKey: ['order-confirmation', sessionId],
-        queryFn: () => confirmOrder(sessionId),
+    const { data: order, isLoading, isSuccess, error } = useQuery({
+        queryKey: ['order-summary', sessionId],
+        queryFn: () => getOrderBySessionId(sessionId),
         enabled: !!sessionId,
-        retry: false, // Nie ponawiaj próby, jeśli się nie uda
+        // Próbujemy pobrać dane kilka razy, dając czas webhookowi na ich stworzenie
+        retry: 5,
+        retryDelay: 1000,
     });
 
     useEffect(() => {
@@ -28,7 +29,8 @@ export default function OrderSummaryPage() {
         }
     }, [isSuccess]);
 
-    if (isLoading) return <div className="p-10">Przetwarzanie Twojego zamówienia...</div>;
+    if (isLoading) return <div className="p-10">Finalizowanie Twojego zamówienia...</div>;
+    if (error) return <div className="p-10 text-red-500">Wystąpił błąd podczas pobierania danych zamówienia.</div>;
 
     return (
         <div className="max-w-2xl mx-auto">
@@ -41,7 +43,6 @@ export default function OrderSummaryPage() {
                 <CardContent>
                     <p><strong>Numer Twojego zamówienia:</strong> {order?.id}</p>
                     <p><strong>Suma:</strong> {(order?.total_amount / 100).toFixed(2)} zł</p>
-                    {/* Tutaj wyświetlimy listę zakupionych produktów */}
                 </CardContent>
             </Card>
         </div>
