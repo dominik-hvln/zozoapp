@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import Stripe from 'stripe';
 import { EventsGateway } from 'src/events/events.gateway';
@@ -11,18 +11,20 @@ export class WebhooksService {
         private prisma: PrismaService,
         private eventsGateway: EventsGateway,
         private mailService: MailService,
-    ) {}
+    ) {
+        const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+        if (!stripeSecretKey) {
+            throw new InternalServerErrorException('Stripe secret key is not configured.');
+        }
+        this.stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-07-30.basil' });
+    }
 
     // GŁÓWNA FUNKCJA, KTÓRA WRACA NA SWOJE MIEJSCE
     async handleSuccessfulCheckout(session: Stripe.Checkout.Session) {
-        console.log(`[WEBHOOK] Otrzymano sesję checkout: ${session.id}, tryb: ${session.mode}`);
-
         if (session.mode === 'subscription') {
             await this.handleSubscriptionUpdate(session);
         } else if (session.mode === 'payment') {
             await this.handleOneTimePayment(session);
-        } else {
-            console.warn(`[WEBHOOK] Nieobsługiwany tryb sesji: ${session.mode}`);
         }
     }
 
@@ -60,15 +62,26 @@ export class WebhooksService {
     }
 
     private async handleOneTimePayment(session: Stripe.Checkout.Session) {
-        console.log('[WEBHOOK] Rozpoczynam obsługę płatności jednorazowej...');
+        console.log(`[WEBHOOK] Rozpoczynam obsługę płatności jednorazowej dla sesji: ${session.id}`);
         const userId = session.client_reference_id;
+
         if (!userId || !session.amount_total) {
             console.error('[WEBHOOK BŁĄD] Brak kluczowych danych w sesji płatności!');
             return;
         }
 
+        // KROK 1: Sprawdź, czy zamówienie już istnieje (kluczowa zmiana!)
+        const existingOrder = await this.prisma.orders.findUnique({
+            where: { stripe_checkout_id: session.id },
+        });
+
+        if (existingOrder) {
+            console.log(`[WEBHOOK] Zamówienie dla sesji ${session.id} już zostało przetworzone. Pomijam.`);
+            return; // Zakończ, jeśli zamówienie już istnieje
+        }
+
         try {
-            // Krok 1: Stwórz zamówienie w bazie
+            // Krok 2: Stwórz zamówienie w bazie
             const order = await this.prisma.orders.create({
                 data: {
                     user_id: userId,
@@ -78,7 +91,7 @@ export class WebhooksService {
             });
             console.log(`[WEBHOOK] Stworzono zamówienie w bazie: ${order.id}`);
 
-            // Krok 2: Pobierz szczegóły produktów i stwórz pozycje zamówienia
+            // Krok 3: Pobierz szczegóły produktów i stwórz pozycje zamówienia
             const lineItems = await this.stripe.checkout.sessions.listLineItems(session.id);
             for (const item of lineItems.data) {
                 if (item.price && item.price.id && item.quantity) {
@@ -99,7 +112,7 @@ export class WebhooksService {
             }
             console.log(`[WEBHOOK] Zapisano pozycje dla zamówienia: ${order.id}`);
 
-            // Krok 3: Wyślij e-mail z potwierdzeniem
+            // Krok 4: Wyślij e-mail z potwierdzeniem
             const user = await this.prisma.users.findUnique({ where: { id: userId } });
             const fullOrderDetails = await this.prisma.orders.findUnique({
                 where: { id: order.id },
