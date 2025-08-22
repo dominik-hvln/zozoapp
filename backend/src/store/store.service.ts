@@ -105,7 +105,7 @@ export class StoreService {
             client_reference_id: userId,
             customer_email: user.email,
             line_items: line_items,
-            success_url: `${process.env.FRONTEND_URL}/panel/koszyk?status=success`,
+                success_url: `${process.env.FRONTEND_URL}/panel/zamowienie/{CHECKOUT_SESSION_ID}`,
             cancel_url: `${process.env.FRONTEND_URL}/panel/koszyk?status=cancel`,
         });
 

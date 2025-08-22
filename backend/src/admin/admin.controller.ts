@@ -44,13 +44,18 @@ export class AdminController {
         return this.adminService.getDashboardStats();
     }
 
+    @Get('tattoos/:id/qr-content')
+    getTattooQrCodeContent(@Param('id') tattooId: string) {
+        return this.adminService.getQrCodeContentForTattoo(tattooId);
+    }
+
     @Get('products')
     getProducts() {
         return this.adminService.getAllProducts();
     }
 
     @Post('products')
-    createProduct(@Body() body: { name: string, description?: string, price: number }) {
+    createProduct(@Body() body: { name: string, description?: string, categoryIds: string[] }) {
         return this.adminService.createProduct(body);
     }
 
@@ -59,8 +64,13 @@ export class AdminController {
         return this.adminService.addVariantToProduct(productId, body);
     }
 
-    @Get('tattoos/:id/qr-content')
-    getTattooQrCodeContent(@Param('id') tattooId: string) {
-        return this.adminService.getQrCodeContentForTattoo(tattooId);
+    @Get('categories')
+    getCategories() {
+        return this.adminService.getAllCategories();
+    }
+
+    @Post('categories')
+    createCategory(@Body('name') name: string) {
+        return this.adminService.createCategory(name);
     }
 }

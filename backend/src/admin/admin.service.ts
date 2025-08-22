@@ -141,23 +141,24 @@ export class AdminService {
     getAllProducts() {
         return this.prisma.products.findMany({
             orderBy: { created_at: 'desc' },
-            include: { product_variants: true },
+            include: { product_variants: true, categories: true },
         });
     }
 
-    async createProduct(data: { name: string, description?: string }) {
-        // Krok 1: Stwórz produkt w Stripe
+    async createProduct(data: { name: string, description?: string, categoryIds?: string[] }) {
         const stripeProduct = await this.stripe.products.create({
             name: data.name,
             description: data.description,
         });
 
-        // Krok 2: Zapisz produkt w naszej bazie danych razem z ID ze Stripe
         return this.prisma.products.create({
             data: {
                 name: data.name,
                 description: data.description,
                 stripe_product_id: stripeProduct.id,
+                categories: {
+                    connect: data.categoryIds?.map(id => ({ id })) || [],
+                },
             },
         });
     }
@@ -168,22 +169,31 @@ export class AdminService {
             throw new NotFoundException('Produkt nie istnieje lub nie jest zsynchronizowany ze Stripe.');
         }
 
-        // Krok 1: Stwórz nową cenę w Stripe powiązaną z produktem
-        const stripePrice = await this.stripe.prices.create({
-            product: product.stripe_product_id,
-            unit_amount: data.price, // Cena w groszach
-            currency: 'pln',
-        });
+        try {
+            const stripePrice = await this.stripe.prices.create({
+                product: product.stripe_product_id,
+                unit_amount: data.price, // Cena w groszach
+                currency: 'pln',
+            });
 
-        // Krok 2: Zapisz wariant w naszej bazie z ID ceny ze Stripe
-        return this.prisma.product_variants.create({
-            data: {
-                product_id: productId,
-                quantity: data.quantity,
-                price: data.price,
-                stripe_price_id: stripePrice.id,
-            }
-        });
+            // Używamy `update` na produkcie, aby stworzyć powiązany wariant.
+            // To jest standardowa i zalecana metoda w Prisma.
+            return this.prisma.products.update({
+                where: { id: productId },
+                data: {
+                    product_variants: {
+                        create: {
+                            quantity: data.quantity,
+                            price: data.price,
+                            stripe_price_id: stripePrice.id,
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.error("Błąd podczas tworzenia wariantu:", error);
+            throw new InternalServerErrorException('Nie udało się stworzyć wariantu w Stripe lub w bazie danych.');
+        }
     }
 
     async getQrCodeContentForTattoo(tattooInstanceId: string): Promise<{ content: string; uniqueCode: string }> {
@@ -197,5 +207,24 @@ export class AdminService {
 
         const qrContent = `${process.env.FRONTEND_URL}/t/${tattoo.unique_code}`;
         return { content: qrContent, uniqueCode: tattoo.unique_code };
+    }
+
+    getAllCategories() {
+        return this.prisma.categories.findMany();
+    }
+
+    createCategory(name: string) {
+        return this.prisma.categories.create({ data: { name } });
+    }
+
+    async assignCategoriesToProduct(productId: string, categoryIds: string[]) {
+        return this.prisma.products.update({
+            where: { id: productId },
+            data: {
+                categories: {
+                    set: categoryIds.map(id => ({ id })),
+                },
+            },
+        });
     }
 }

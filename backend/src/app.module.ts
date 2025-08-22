@@ -18,9 +18,10 @@ import { ProfileModule } from './profile/profile.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { EventsModule } from './events/events.module';
 import { CartModule } from './cart/cart.module';
+import { OrdersModule } from './orders/orders.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule, PrismaModule, ChildrenModule, TattoosModule, ScansModule, MailModule, AdminModule, StoreModule, DashboardModule, ProfileModule, WebhooksModule, EventsModule, CartModule],
+  imports: [ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule, PrismaModule, ChildrenModule, TattoosModule, ScansModule, MailModule, AdminModule, StoreModule, DashboardModule, ProfileModule, WebhooksModule, EventsModule, CartModule, OrdersModule],
   controllers: [AppController, ChildrenController],
   providers: [AppService, ChildrenService],
 })
