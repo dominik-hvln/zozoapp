@@ -6,6 +6,7 @@ import { MailService } from 'src/mail/mail.service';
 
 @Injectable()
 export class WebhooksService {
+    private stripe: Stripe;
     constructor(
         private prisma: PrismaService,
         private eventsGateway: EventsGateway,
@@ -62,33 +63,55 @@ export class WebhooksService {
         console.log('[WEBHOOK] Rozpoczynam obsługę płatności jednorazowej...');
         const userId = session.client_reference_id;
         if (!userId || !session.amount_total) {
-            console.error('[WEBHOOK BŁĄD] Brak userId lub kwoty w sesji płatności!', { sessionId: session.id });
+            console.error('[WEBHOOK BŁĄD] Brak kluczowych danych w sesji płatności!');
             return;
         }
 
-        // Czekamy chwilę, aby dać czas na stworzenie zamówienia w `processSuccessfulOrder`
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            // Krok 1: Stwórz zamówienie w bazie
+            const order = await this.prisma.orders.create({
+                data: {
+                    user_id: userId,
+                    stripe_checkout_id: session.id,
+                    total_amount: session.amount_total,
+                }
+            });
+            console.log(`[WEBHOOK] Stworzono zamówienie w bazie: ${order.id}`);
 
-        const user = await this.prisma.users.findUnique({ where: { id: userId } });
-        const order = await this.prisma.orders.findFirst({
-            where: { stripe_checkout_id: session.id },
-            include: {
-                order_items: {
-                    include: {
-                        product_variants: {
-                            include: {
-                                products: { select: { name: true } }
+            // Krok 2: Pobierz szczegóły produktów i stwórz pozycje zamówienia
+            const lineItems = await this.stripe.checkout.sessions.listLineItems(session.id);
+            for (const item of lineItems.data) {
+                if (item.price && item.price.id && item.quantity) {
+                    const variant = await this.prisma.product_variants.findUnique({
+                        where: { stripe_price_id: item.price.id }
+                    });
+                    if (variant) {
+                        await this.prisma.order_items.create({
+                            data: {
+                                order_id: order.id,
+                                product_variant_id: variant.id,
+                                quantity: item.quantity,
+                                price: variant.price,
                             }
-                        }
+                        });
                     }
                 }
             }
-        });
+            console.log(`[WEBHOOK] Zapisano pozycje dla zamówienia: ${order.id}`);
 
-        if (user && order) {
-            await this.mailService.sendOrderConfirmationEmail(user.email, order);
-        } else {
-            console.error(`[WEBHOOK BŁĄD] Nie znaleziono użytkownika lub zamówienia dla sesji płatności: ${session.id}`);
+            // Krok 3: Wyślij e-mail z potwierdzeniem
+            const user = await this.prisma.users.findUnique({ where: { id: userId } });
+            const fullOrderDetails = await this.prisma.orders.findUnique({
+                where: { id: order.id },
+                include: { order_items: { include: { product_variants: { include: { products: true } } } } }
+            });
+
+            if (user && fullOrderDetails) {
+                await this.mailService.sendOrderConfirmationEmail(user.email, fullOrderDetails);
+            }
+        } catch (error) {
+            console.error('[WEBHOOK BŁĄD KRYTYCZNY] Nie udało się przetworzyć zamówienia:', error);
+            throw error;
         }
     }
 }
