@@ -53,7 +53,7 @@ export function Sidebar({ onLogout }: { onLogout?: () => void }) {
             <div className="p-4 mt-auto border-t">
                 <div className="flex items-center gap-3 mb-4">
                     <Avatar className="h-9 w-9">
-                        <AvatarImage src="" /> {/* Można dodać link do avatara usera */}
+                        <AvatarImage src={user?.avatar_url || undefined} alt={user?.email} key={user?.avatar_url} />
                         <AvatarFallback>{user?.email.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div>

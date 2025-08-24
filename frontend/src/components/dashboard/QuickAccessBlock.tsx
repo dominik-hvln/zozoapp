@@ -4,9 +4,14 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, ShoppingCart } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useQuery} from '@tanstack/react-query';
+import { api } from '@/lib/api';
+
+const getProfile = async () => (await api.get('/profile/me')).data;
 
 export function QuickAccessBlock() {
     const { user } = useAuthStore();
+    const { data: profile, isLoading } = useQuery({ queryKey: ['profile'], queryFn: getProfile });
 
     if (!user) return null;
 
@@ -14,10 +19,8 @@ export function QuickAccessBlock() {
         <div className="bg-white p-4 rounded-lg shadow-sm border">
             <div className="flex items-center">
                 <Avatar className="h-16 w-16 mr-4">
-                    <AvatarImage src="" alt={user.email} />
-                    <AvatarFallback className="text-xl">
-                        {user.email.substring(0, 2).toUpperCase()}
-                    </AvatarFallback>
+                    <AvatarImage src={profile?.avatar_url || undefined} alt={user?.email} key={profile?.avatar_url} />
+                    <AvatarFallback>{user?.email.substring(0, 2).toUpperCase()}</AvatarFallback>
                 </Avatar>
                 <div>
                     <h2 className="text-xl font-bold">Witaj, {user.firstName || 'Użytkowniku'}!</h2>

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -19,7 +19,6 @@ export class ChildrenService {
         });
     }
 
-    // POPRAWKA JEST TUTAJ:
     findAllForUser(userId: string) {
         return this.prisma.children.findMany({
             where: {
@@ -39,6 +38,28 @@ export class ChildrenService {
                 created_at: 'asc',
             },
         });
+    }
+
+    async findOneById(childId: string, userId: string) {
+        const child = await this.prisma.children.findFirst({
+            where: {
+                id: childId,
+                user_id: userId,
+            },
+            include: {
+                assignments: {
+                    where: { is_active: true },
+                    include: {
+                        tattoo_instances: { select: { unique_code: true } }
+                    }
+                }
+            }
+        });
+
+        if (!child) {
+            throw new NotFoundException('Nie znaleziono profilu dziecka.');
+        }
+        return child;
     }
 
     update(childId: string, data: Prisma.childrenUncheckedUpdateInput, userId: string) {

@@ -13,6 +13,7 @@ import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
 
 interface ProfileData {
+    avatar_url: string;
     id: string;
     email: string;
     first_name: string | null;
@@ -30,7 +31,7 @@ const getProfile = async (): Promise<ProfileData> => (await api.get('/profile/me
 // --- KOMPONENT ---
 export default function ProfilPage() {
     const { data: profile, isLoading } = useQuery({ queryKey: ['fullProfile'], queryFn: getProfile });
-    const { logout } = useAuthStore();
+    const { user, logout } = useAuthStore();
 
     const fruitAvatars = [AppleIcon, LemonIcon];
     const getFallbackAvatar = (id: string) => fruitAvatars[id.charCodeAt(0) % fruitAvatars.length];
@@ -44,8 +45,8 @@ export default function ProfilPage() {
                 <Card>
                     <CardHeader className="items-center text-center justify-center">
                         <Avatar className="w-24 h-24 mb-4 mx-auto">
-                            <AvatarImage src="" alt="User avatar" />
-                            <AvatarFallback className="text-3xl">{profile.first_name?.[0]}{profile.last_name?.[0]}</AvatarFallback>
+                            <AvatarImage src={profile?.avatar_url || undefined} alt={user?.email} key={profile?.avatar_url} />
+                            <AvatarFallback>{profile?.email.substring(0, 2).toUpperCase()}</AvatarFallback>
                         </Avatar>
                         <CardTitle>{profile.first_name} {profile.last_name}</CardTitle>
                     </CardHeader>

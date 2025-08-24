@@ -20,6 +20,11 @@ export class ChildrenController {
         return this.childrenService.findAllForUser(userId);
     }
 
+    @Get(':id')
+    findOne(@Param('id') childId: string, @Request() req) {
+        return this.childrenService.findOneById(childId, req.user.userId);
+    }
+
     @Put(':id')
     update(@Param('id') childId: string, @Body() data: Prisma.childrenUncheckedUpdateInput, @Request() req) {
         const userId = req.user.userId;

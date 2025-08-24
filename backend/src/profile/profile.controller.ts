@@ -13,7 +13,7 @@ export class ProfileController {
     }
 
     @Patch('me')
-    updateProfile(@Request() req, @Body() body: { firstName: string, lastName: string, phone: string }) {
+    updateProfile(@Request() req, @Body() body: { firstName: string, lastName: string, avatar_url: string, phone: string }) {
         return this.profileService.updateProfile(req.user.userId, body);
     }
 

@@ -9,6 +9,7 @@ interface UserPayload {
     role: 'USER' | 'ADMIN';
     status: 'TRIAL' | 'ACTIVE' | 'BLOCKED';
     firstName: string | null;
+    avatar_url: string | null;
 }
 
 interface AuthState {

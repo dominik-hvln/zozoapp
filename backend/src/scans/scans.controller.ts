@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Ip, Headers, Post, Body } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Ip, Headers } from '@nestjs/common';
 import { ScansService } from './scans.service';
 
 @Controller('scans')

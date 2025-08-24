@@ -1,12 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { MailService } from 'src/mail/mail.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class ScansService {
     constructor(
         private prisma: PrismaService,
         private mailService: MailService,
+        private notificationsService: NotificationsService,
     ) {}
 
     private calculateAge(dob: Date | null): number | null {
@@ -32,6 +34,13 @@ export class ScansService {
         if (!assignment) {
             throw new NotFoundException('Nie znaleziono aktywnego tatuażu dla tego kodu.');
         }
+
+        await this.notificationsService.create({
+            user_id: assignment.user_id,
+            type: 'SCAN',
+            title: `Twój tatuaż dla ${assignment.children.name} został zeskanowany!`,
+            message: 'Ktoś właśnie zeskanował kod QR. Sprawdź e-mail, aby uzyskać więcej informacji.',
+        });
 
         const newScan = await this.prisma.scans.create({
             data: {
@@ -67,7 +76,10 @@ export class ScansService {
     async addLocationToScan(scanId: string, lat: number, lon: number) {
         return this.prisma.scans.update({
             where: { id: scanId },
-            data: { latitude: lat, longitude: lon },
+            data: {
+                latitude: lat,
+                longitude: lon,
+            },
         });
     }
 }

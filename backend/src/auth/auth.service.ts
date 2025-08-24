@@ -37,10 +37,9 @@ export class AuthService {
         console.log('SECRET KEY CHECK:', secret ? `Secret o długości ${secret.length} został znaleziony.` : '!!! SEKRET JEST PUSTY LUB NIEZNALEZIONY !!!');
 
         const payload = {
-            sub: newUser.id,
-            email: newUser.email,
-            role: newUser.role,
-            status: newUser.account_status,
+            sub: newUser.id, email: newUser.email, role: newUser.role,
+            status: newUser.account_status, firstName: newUser.first_name,
+            avatar_url: newUser.avatar_url,
         };
         const accessToken = await this.jwtService.signAsync(payload);
         return {
@@ -60,11 +59,9 @@ export class AuthService {
         }
 
         const payload = {
-            sub: user.id,
-            email: user.email,
-            role: user.role,
-            status: user.account_status,
-            firstName: user.first_name,
+            sub: user.id, email: user.email, role: user.role,
+            status: user.account_status, firstName: user.first_name,
+            avatar_url: user.avatar_url,
         };
         const accessToken = await this.jwtService.signAsync(payload);
 

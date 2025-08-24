@@ -1,5 +1,7 @@
 'use client';
 
+import { useQuery} from '@tanstack/react-query';
+import { api } from '@/lib/api';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import Image from 'next/image';
@@ -18,8 +20,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
+const getProfile = async () => (await api.get('/profile/me')).data;
 
-// Definicja linków w nawigacji
 const mainNavLinks = [
     { href: '/panel', label: 'Panel Rodzica', icon: Home },
     { href: '/panel/dzieci', label: 'Przegląd dzieci', icon: Users },
@@ -49,13 +51,23 @@ function NavLinks() {
     );
 }
 
+const getUnreadNotificationsCount = async (): Promise<number> => {
+    const response = await api.get('/notifications/unread-count');
+    return response.data;
+};
+
 export function Header() {
     const pathname = usePathname();
     const { user, logout } = useAuthStore();
     const itemsInCart = useCartStore((state) => state.items.length);
-    const notificationCount = 1;
+    const { data: profile, isLoading } = useQuery({ queryKey: ['profile'], queryFn: getProfile });
 
-    // Prosta funkcja do formatowania daty
+    const { data: unreadCount } = useQuery({
+        queryKey: ['unreadNotificationsCount'],
+        queryFn: getUnreadNotificationsCount,
+        refetchInterval: 60000,
+    });
+
     const formattedDate = new Intl.DateTimeFormat('pl-PL', {
         weekday: 'long',
         year: 'numeric',
@@ -63,6 +75,7 @@ export function Header() {
         day: 'numeric'
     }).format(new Date());
 
+    // @ts-ignore
     return (
         <header className="text-white sticky top-4 z-40 px-4">
             <div className="container mx-auto bg-[#466ec6] flex h-16 lg:h-20 items-center justify-between px-4 rounded-[20px]">
@@ -97,21 +110,23 @@ export function Header() {
                             <Settings className="h-5 w-5" />
                         </Button>
                     </Link>
-                    <Button variant="ghost" size="icon" className="relative rounded-full text-white hover:bg-white/20 hover:text-white">
-                        <Bell className="h-5 w-5" />
-                        {notificationCount > 0 && (
-                            <span className="absolute top-1 right-1.5 flex h-2 w-2">
-                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                            </span>
-                        )}
-                    </Button>
+                    <Link href="/panel/powiadomienia">
+                        <Button variant="ghost" size="icon" className="relative rounded-full text-white hover:bg-white/20 hover:text-white">
+                            <Bell className="h-5 w-5" />
+                            { unreadCount > 0 && (
+                                <span className="absolute top-1 right-1.5 flex h-2 w-2">
+                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                                </span>
+                            )}
+                        </Button>
+                    </Link>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="ghost" className="relative h-8 w-8 rounded-full text-black">
                                 <Avatar className="h-8 w-8">
-                                    <AvatarImage src="" alt={user?.email} />
+                                    <AvatarImage src={profile?.avatar_url || undefined} alt={user?.email} key={profile?.avatar_url} />
                                     <AvatarFallback>{user?.email.substring(0, 2).toUpperCase()}</AvatarFallback>
                                 </Avatar>
                             </Button>

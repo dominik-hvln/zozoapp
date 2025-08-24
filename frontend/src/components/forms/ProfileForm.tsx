@@ -7,10 +7,14 @@ import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useEffect } from 'react';
+import { useAuthStore } from '@/store/auth.store'; // Potrzebny import
+
+// Import komponentów
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
+// --- TYPY I SCHEMAT ---
 interface ProfileData {
     first_name: string | null;
     last_name: string | null;
@@ -23,10 +27,14 @@ const profileSchema = z.object({
 });
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
+// --- FUNKCJA API ---
 const updateProfile = async (data: ProfileFormValues) => (await api.patch('/profile/me', data)).data;
 
+// --- KOMPONENT ---
 export function ProfileForm({ profileData }: { profileData: ProfileData | undefined }) {
     const queryClient = useQueryClient();
+    const { setToken } = useAuthStore(); // Pobieramy setToken
+
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),
         defaultValues: {
@@ -48,10 +56,20 @@ export function ProfileForm({ profileData }: { profileData: ProfileData | undefi
 
     const mutation = useMutation({
         mutationFn: updateProfile,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['fullProfile'] });
-            queryClient.invalidateQueries({ queryKey: ['profile'] });
-            toast.success('Profil został zaktualizowany!');
+        onSuccess: async () => {
+            toast.success('Profil został pomyślnie zaktualizowany!');
+
+            // OSTATECZNA POPRAWKA: Odświeżamy sesję po zapisaniu zmian
+            try {
+                const response = await api.post('/auth/refresh');
+                setToken(response.data.access_token);
+            } catch (error) {
+                toast.error('Nie udało się odświeżyć sesji.');
+            }
+
+            // Unieważniamy cache, aby mieć pewność, że wszystko jest świeże
+            await queryClient.invalidateQueries({ queryKey: ['fullProfile'] });
+            await queryClient.invalidateQueries({ queryKey: ['profile'] });
         },
         onError: () => toast.error('Wystąpił błąd podczas aktualizacji profilu.'),
     });
