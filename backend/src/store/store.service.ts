@@ -41,7 +41,7 @@ export class StoreService {
         });
     }
 
-    async createSubscriptionCheckoutSession(userId: string) {
+    async createSubscriptionCheckoutSession(userId: string, platform: string) {
         const user = await this.prisma.users.findUnique({
             where: { id: userId },
             select: { email: true },
@@ -49,6 +49,13 @@ export class StoreService {
         if (!user) {
             throw new NotFoundException('Użytkownik nie został znaleziony.');
         }
+        const successUrl = platform === 'mobile'
+            ? `zozoapp://payment-complete?status=success`
+            : `${process.env.FRONTEND_URL}/panel?payment=success`;
+
+        const cancelUrl = platform === 'mobile'
+            ? `zozoapp://payment-complete?status=cancel`
+            : `${process.env.FRONTEND_URL}/panel`;
         try {
             const session = await this.stripe.checkout.sessions.create({
                 ui_mode: 'hosted',
@@ -60,8 +67,8 @@ export class StoreService {
                     price: 'price_1RwJhZLpI3RKz2R39q16HoQU',
                     quantity: 1,
                 }],
-                success_url: `${process.env.FRONTEND_URL}/payment-complete?session_id={CHECKOUT_SESSION_ID}`,
-                cancel_url: `${process.env.FRONTEND_URL}/panel`,
+                success_url: successUrl,
+                cancel_url: cancelUrl,
             });
             return session;
         } catch (error) {

@@ -1,18 +1,17 @@
 'use client';
 
-import { Header } from '@/components/layout/Header';
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, PartyPopper } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useSocket } from '@/hooks/useSocket';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
+import { Header } from '@/components/layout/Header';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode; }) {
     const { token, user, setToken } = useAuthStore();
@@ -23,34 +22,41 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     useSocket();
 
     useEffect(() => { setIsClient(true); }, []);
+
+    // Nasłuchiwanie na powrót do aplikacji (dla płatności mobilnych)
+    useEffect(() => {
+        if (Capacitor.isNativePlatform()) {
+            App.addListener('appUrlOpen', () => {
+                Browser.close();
+                toast.info('Przetwarzanie płatności...');
+                api.post('/auth/refresh').then(response => {
+                    setToken(response.data.access_token);
+                    queryClient.invalidateQueries({ queryKey: ['fullProfile'] });
+                    toast.success('Płatność zakończona pomyślnie!');
+                });
+            });
+        }
+        return () => {
+            if (Capacitor.isNativePlatform()) {
+                App.removeAllListeners();
+            }
+        };
+    }, [queryClient, setToken]);
+
     useEffect(() => {
         if (isClient && !token) {
             router.push('/login');
         }
     }, [token, router, isClient]);
 
-    const refreshMutation = useMutation({
-        mutationFn: () => api.post('/auth/refresh'),
-        onSuccess: (response) => {
-            setToken(response.data.access_token);
-            queryClient.invalidateQueries({ queryKey: ['fullProfile'] });
-            toast.success('Płatność zakończona pomyślnie!', {
-                description: 'Dziękujemy! Twoje konto jest ponownie aktywne.',
-            });
-        },
-    });
-
     const checkoutMutation = useMutation({
-        mutationFn: () => api.post('/store/checkout/subscription'),
+        // OSTATECZNA POPRAWKA: Wysyłamy informację o platformie
+        mutationFn: () => {
+            const platform = Capacitor.isNativePlatform() ? 'mobile' : 'web';
+            return api.post('/store/checkout/subscription', { platform });
+        },
         onSuccess: async (response) => {
             const { url } = response.data;
-
-            // Dodajemy nasłuchiwanie na zamknięcie przeglądarki
-            Browser.addListener('browserFinished', () => {
-                console.log('Browser closed, refreshing session...');
-                refreshMutation.mutate();
-            });
-
             if (Capacitor.isNativePlatform()) {
                 await Browser.open({ url });
             } else {
@@ -67,38 +73,24 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const isAccountBlocked = user?.status === 'BLOCKED';
 
     return (
-        <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-            <div className={`hidden border-r bg-muted/40 md:block ${isAccountBlocked ? 'pointer-events-none' : ''}`}>
-                <Header />
-            </div>
-            <div className="flex flex-col">
-                <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6 md:hidden relative z-20">
-                    <Sheet>
-                        <SheetTrigger asChild>
-                            <Button variant="outline" size="icon" className="shrink-0"><Menu className="h-5 w-5" /></Button>
-                        </SheetTrigger>
-                        <SheetContent side="left" className="flex flex-col p-0 w-64">
-                            <SheetHeader className='sr-only'><SheetTitle>Menu Główne</SheetTitle></SheetHeader>
-                            <Header />
-                        </SheetContent>
-                    </Sheet>
-                    <div className="text-lg font-bold">ZozoApp</div>
-                </header>
-                <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative">
-                    {isAccountBlocked && (
-                        <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
-                            <div className="text-center p-6 border rounded-lg bg-white shadow-xl max-w-sm">
-                                <h2 className="text-xl font-bold">Twoje konto wygasło</h2>
-                                <p className="text-muted-foreground mt-2">Wykup subskrypcję, aby odblokować pełen dostęp.</p>
-                                <Button onClick={() => checkoutMutation.mutate()} disabled={checkoutMutation.isPending} className="mt-4">
-                                    {checkoutMutation.isPending ? 'Przetwarzanie...' : 'Wykup Subskrypcję'}
-                                </Button>
-                            </div>
+        <div className="flex min-h-screen w-full flex-col">
+            <Header />
+            <main className="flex-1 p-4 lg:p-8 relative">
+                {isAccountBlocked && (
+                    <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
+                        <div className="text-center p-6 border rounded-lg bg-white shadow-xl max-w-sm">
+                            <h2 className="text-xl font-bold">Twoje konto wygasło</h2>
+                            <p className="text-muted-foreground mt-2">Wykup subskrypcję, aby odblokować pełen dostęp.</p>
+                            <Button onClick={() => checkoutMutation.mutate()} disabled={checkoutMutation.isPending} className="mt-4">
+                                {checkoutMutation.isPending ? 'Przetwarzanie...' : 'Wykup Subskrypcję'}
+                            </Button>
                         </div>
-                    )}
+                    </div>
+                )}
+                <div className="container mx-auto">
                     {children}
-                </main>
-            </div>
+                </div>
+            </main>
         </div>
     );
 }

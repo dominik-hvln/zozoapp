@@ -18,8 +18,8 @@ export class StoreController {
 
     @UseGuards(JwtAuthGuard)
     @Post('checkout/subscription')
-    createSubscriptionCheckout(@Request() req) {
-        return this.storeService.createSubscriptionCheckoutSession(req.user.userId);
+    createSubscriptionCheckout(@Request() req, @Body() body: { platform: 'web' | 'mobile' }) {
+        return this.storeService.createSubscriptionCheckoutSession(req.user.userId, body.platform);
     }
 
     @UseGuards(JwtAuthGuard)
