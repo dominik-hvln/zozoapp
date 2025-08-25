@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import Image from 'next/image';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -52,7 +52,7 @@ export default function DzieciPage() {
 
     const queryClient = useQueryClient();
 
-    const { data: children, isLoading, error } = useQuery({ queryKey: ['children'], queryFn: getChildren });
+    const { data: children, isLoading } = useQuery({ queryKey: ['children'], queryFn: getChildren });
 
     const childMutation = useMutation({
         mutationFn: (values: typeof formData) => {

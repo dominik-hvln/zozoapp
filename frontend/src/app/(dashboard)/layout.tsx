@@ -1,12 +1,10 @@
 'use client';
 
-import { Sidebar } from '@/components/layout/Sidebar';
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { Menu, PartyPopper, XCircle, Loader2, ShoppingCart } from 'lucide-react';
+import { PartyPopper, XCircle, Loader2 } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
