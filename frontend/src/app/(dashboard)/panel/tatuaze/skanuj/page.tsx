@@ -70,11 +70,16 @@ export default function SkanujPage() {
 
             handleCodeDetected(result.ScanResult);
 
-        } catch (e: any) {
-            if (e.message.toLowerCase().includes('cancelled')) {
-                router.back();
+        } catch (e: unknown) { // **THIS IS THE FIX**
+            // Safely check if the error object has a message property
+            if (e instanceof Error) {
+                if (e.message.toLowerCase().includes('cancelled')) {
+                    router.back();
+                } else {
+                    setError(`Wystąpił błąd skanera: ${e.message}`);
+                }
             } else {
-                setError(`Wystąpił błąd skanera: ${e.message}`);
+                setError('Wystąpił nieznany błąd skanera.');
             }
         } finally {
             document.querySelector('body')?.style.removeProperty('background-color');
