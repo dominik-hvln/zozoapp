@@ -5,24 +5,29 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Capacitor } from '@capacitor/core';
-import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
-import jsQR from 'jsqr';
+
+// Importy dla obu skanerów
 import { Scanner as WebScanner } from '@yudiel/react-qr-scanner';
 import { IDetectedBarcode } from '@yudiel/react-qr-scanner';
+import { CapacitorBarcodeScanner, CapacitorBarcodeScannerTypeHint } from '@capacitor/barcode-scanner';
 
-// Import komponentów
+// Import komponentów UI
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ScanLine, Camera as CameraIcon } from 'lucide-react';
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 export default function SkanujPage() {
     const router = useRouter();
     const [isNative, setIsNative] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
+    // Sprawdzamy, czy działamy w aplikacji mobilnej, tylko raz po załadowaniu
     useEffect(() => {
         setIsNative(Capacitor.isNativePlatform());
     }, []);
 
+    // Wspólna funkcja do obsługi wykrytego kodu (z obu skanerów)
     const handleCodeDetected = (code: string | null) => {
         if (!code) {
             toast.error('Nie udało się odczytać kodu QR.');
@@ -44,56 +49,35 @@ export default function SkanujPage() {
         }
     };
 
+    // --- Logika dla Skanera Webowego (Przeglądarka) ---
     const handleWebScanSuccess = (result: IDetectedBarcode[]) => {
         handleCodeDetected(result[0].rawValue);
     };
-
     const handleWebScanError = (error: unknown) => {
         if (error instanceof Error && !error.message.includes('No QR code found')) {
             console.error('Błąd skanera webowego:', error.message);
         }
     };
 
-    const handleNativeScan = async () => {
+    // --- Logika dla Skanera Natywnego (Aplikacja Mobilna) ---
+    const startNativeScan = async () => {
         try {
-            await Camera.requestPermissions();
-            const image = await Camera.getPhoto({
-                quality: 90,
-                allowEditing: false,
-                resultType: CameraResultType.Uri,
-                source: CameraSource.Camera,
+            document.querySelector('body')?.style.setProperty('background-color', 'transparent');
+
+            const result = await CapacitorBarcodeScanner.scanBarcode({
+                hint: CapacitorBarcodeScannerTypeHint.QR_CODE,
             });
 
-            if (image.webPath) {
-                const response = await fetch(image.webPath);
-                const blob = await response.blob();
-                const reader = new FileReader();
+            handleCodeDetected(result.ScanResult);
 
-                reader.onload = (e) => {
-                    const img = new window.Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = img.width;
-                        canvas.height = img.height;
-                        const ctx = canvas.getContext('2d');
-                        if (ctx) {
-                            ctx.drawImage(img, 0, 0, img.width, img.height);
-                            const imageData = ctx.getImageData(0, 0, img.width, img.height);
-                            const code = jsQR(imageData.data, imageData.width, imageData.height);
-                            handleCodeDetected(code?.data || null);
-                        }
-                    };
-                    img.src = e.target?.result as string;
-                };
-                reader.readAsDataURL(blob);
+        } catch (e: any) {
+            if (e.message.toLowerCase().includes('cancelled')) {
+                router.back();
+            } else {
+                setError(`Wystąpił błąd skanera: ${e.message}`);
             }
-            // POPRAWKA: Używamy typu `unknown` i sprawdzamy, czy błąd ma treść
-        } catch (error: unknown) {
-            if (error instanceof Error && error.message.includes('User cancelled photos app')) {
-                return;
-            }
-            console.error('Błąd kamery natywnej:', error);
-            toast.error('Nie udało się otworzyć aparatu lub odczytać zdjęcia.');
+        } finally {
+            document.querySelector('body')?.style.removeProperty('background-color');
         }
     };
 
@@ -106,13 +90,14 @@ export default function SkanujPage() {
                     </div>
                     <CardTitle className="mt-4 text-2xl font-bold">Skieruj aparat na kod QR</CardTitle>
                     <p className="text-muted-foreground pt-1">
-                        {isNative ? 'Naciśnij przycisk, aby uruchomić aparat.' : 'Skanowanie rozpocznie się automatycznie.'}
+                        {isNative ? 'Naciśnij przycisk, aby uruchomić natywny skaner.' : 'Skanowanie rozpocznie się automatycznie.'}
                     </p>
                 </CardHeader>
                 <CardContent>
+                    {/* Renderujemy odpowiedni komponent w zależności od platformy */}
                     {isNative ? (
                         <div className="aspect-square w-full flex items-center justify-center">
-                            <Button onClick={handleNativeScan} className="h-24 w-24 rounded-full flex-col">
+                            <Button onClick={startNativeScan} className="h-24 w-24 rounded-full flex-col">
                                 <CameraIcon className="h-10 w-10 mb-2"/>
                                 <span>Skanuj</span>
                             </Button>
@@ -122,6 +107,7 @@ export default function SkanujPage() {
                             <WebScanner
                                 onScan={handleWebScanSuccess}
                                 onError={handleWebScanError}
+                                constraints={{ facingMode: 'environment' }}
                                 components={{ onOff: false, torch: false }}
                             />
                         </div>
@@ -133,6 +119,15 @@ export default function SkanujPage() {
                     </div>
                 </CardContent>
             </Card>
+
+            <AlertDialog open={!!error} onOpenChange={() => { setError(null); router.back(); }}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Wystąpił błąd</AlertDialogTitle>
+                        <AlertDialogDescription>{error}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
