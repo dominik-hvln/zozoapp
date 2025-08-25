@@ -60,7 +60,7 @@ export class StoreService {
                     price: 'price_1RwJhZLpI3RKz2R39q16HoQU',
                     quantity: 1,
                 }],
-                success_url: `${process.env.FRONTEND_URL}/panel?payment=success`,
+                success_url: `${process.env.FRONTEND_URL}/payment-complete?session_id={CHECKOUT_SESSION_ID}`,
                 cancel_url: `${process.env.FRONTEND_URL}/panel`,
             });
             return session;
