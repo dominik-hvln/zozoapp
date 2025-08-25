@@ -1,32 +1,33 @@
 'use client';
 
+import { Sidebar } from '@/components/layout/Sidebar';
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import { PartyPopper, XCircle, Loader2 } from 'lucide-react';
-import { useMutation } from '@tanstack/react-query';
+import { Menu, PartyPopper, XCircle, Loader2 } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { useSocket } from '@/hooks/useSocket';
-import { Header } from '@/components/layout/Header';
-import { DatePickerDefaults } from '@/components/utils/DatePickerDefaults';
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser'; // Import nowej wtyczki
 
+// Komponent do obsługi statusu płatności (z "cichym odświeżeniem")
 function PaymentStatus() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const status = searchParams.get('payment');
     const { setToken } = useAuthStore.getState();
+    const queryClient = useQueryClient();
 
     const refreshMutation = useMutation({
         mutationFn: () => api.post('/auth/refresh'),
         onSuccess: (response) => {
-            const { access_token } = response.data;
-            setToken(access_token); // Podmieniamy token na nowy
-            toast.success('Płatność zakończona pomyślnie!', {
-                description: 'Dziękujemy! Twoje konto jest ponownie aktywne.',
-                icon: <PartyPopper className="h-5 w-5 text-green-500" />
-            });
+            setToken(response.data.access_token);
+            queryClient.invalidateQueries({ queryKey: ['fullProfile'] });
+            toast.success('Płatność zakończona pomyślnie!', { description: 'Twoje konto jest ponownie aktywne.' });
             router.replace('/panel');
         },
         onError: () => {
@@ -40,10 +41,10 @@ function PaymentStatus() {
             refreshMutation.mutate();
         }
         if (status === 'cancel') {
-            toast.error('Płatność anulowana', { icon: <XCircle className="h-5 w-5 text-red-500" /> });
+            toast.error('Płatność anulowana');
             router.replace('/panel');
         }
-    }, [status, router]);
+    }, [status, router, refreshMutation]);
 
     if (refreshMutation.isPending) {
         return (
@@ -56,12 +57,11 @@ function PaymentStatus() {
             </div>
         );
     }
-
     return null;
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode; }) {
-    const { token, user, logout } = useAuthStore();
+    const { token, user } = useAuthStore();
     const router = useRouter();
     const [isClient, setIsClient] = useState(false);
 
@@ -76,8 +76,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     const checkoutMutation = useMutation({
         mutationFn: () => api.post('/store/checkout/subscription'),
-        onSuccess: (response) => {
-            window.location.href = response.data.url;
+        onSuccess: async (response) => {
+            const { url } = response.data;
+            // OSTATECZNA POPRAWKA: Używamy In-App Browser
+            await Browser.open({ url });
         },
         onError: () => toast.error('Nie udało się rozpocząć procesu płatności. Spróbuj ponownie.'),
     });
@@ -87,16 +89,30 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
 
     const isAccountBlocked = user?.status === 'BLOCKED';
+
     return (
         <>
-            <DatePickerDefaults />
-            <PaymentStatus /> {/* Dodajemy komponent obsługi płatności */}
-            <div className="grid min-h-screen w-full mt-6">
+            <PaymentStatus />
+            <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+                <div className={`hidden border-r bg-muted/40 md:block ${isAccountBlocked ? 'pointer-events-none' : ''}`}>
+                    <Sidebar />
+                </div>
                 <div className="flex flex-col">
-                    <Header />
-                    <main className="container mx-auto flex-1 overflow-y-auto py-8 px-4 md:px-0 relative">
+                    <header className="flex h-14 items-center gap-4 border-b bg-muted/40 px-4 lg:h-[60px] lg:px-6 md:hidden relative z-20">
+                        <Sheet>
+                            <SheetTrigger asChild>
+                                <Button variant="outline" size="icon" className="shrink-0"><Menu className="h-5 w-5" /></Button>
+                            </SheetTrigger>
+                            <SheetContent side="left" className="flex flex-col p-0 w-64">
+                                <SheetHeader className='sr-only'><SheetTitle>Menu Główne</SheetTitle></SheetHeader>
+                                <Sidebar />
+                            </SheetContent>
+                        </Sheet>
+                        <div className="text-lg font-bold">ZozoApp</div>
+                    </header>
+                    <main className="flex-1 overflow-y-auto p-4 lg:p-8 relative">
                         {isAccountBlocked && (
-                            <div className="absolute inset-0 backdrop-blur-sm z-10 flex items-center justify-center">
+                            <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
                                 <div className="text-center p-6 border rounded-lg bg-white shadow-xl max-w-sm">
                                     <h2 className="text-xl font-bold">Twoje konto wygasło</h2>
                                     <p className="text-muted-foreground mt-2">Wykup subskrypcję, aby odblokować pełen dostęp.</p>
