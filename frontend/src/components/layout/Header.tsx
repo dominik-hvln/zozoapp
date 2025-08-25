@@ -112,7 +112,7 @@ export function Header() {
                     <Link href="/panel/powiadomienia">
                         <Button variant="ghost" size="icon" className="relative rounded-full text-white hover:bg-white/20 hover:text-white">
                             <Bell className="h-5 w-5" />
-                            { unreadCount > 0 && (
+                            {unreadCount && unreadCount > 0 && (
                                 <span className="absolute top-1 right-1.5 flex h-2 w-2">
                                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
                                     <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
