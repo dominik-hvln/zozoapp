@@ -75,7 +75,6 @@ export function Header() {
         day: 'numeric'
     }).format(new Date());
 
-    // @ts-ignore
     return (
         <header className="text-white sticky top-4 z-40 px-4">
             <div className="container mx-auto bg-[#466ec6] flex h-16 lg:h-20 items-center justify-between px-4 rounded-[20px]">
