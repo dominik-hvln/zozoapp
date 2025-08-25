@@ -31,7 +31,7 @@ function PaymentStatus() {
                 description: 'Dziękujemy! Twoje konto jest ponownie aktywne.',
                 icon: <PartyPopper className="h-5 w-5 text-green-500" />
             });
-            router.replace('/panel'); // Czyścimy URL bez przeładowania
+            router.replace('/panel');
         },
         onError: () => {
             toast.error("Wystąpił błąd sesji", { description: "Proszę, zaloguj się ponownie."});
@@ -40,17 +40,15 @@ function PaymentStatus() {
     });
 
     useEffect(() => {
-        // Ta logika jest przeznaczona tylko dla przeglądarek
-        if (status === 'success' && !Capacitor.isNativePlatform()) {
+        if (status === 'success') {
             refreshMutation.mutate();
         }
-        if (status === 'cancel' && !Capacitor.isNativePlatform()) {
+        if (status === 'cancel') {
             toast.error('Płatność anulowana', { icon: <XCircle className="h-5 w-5 text-red-500" /> });
             router.replace('/panel');
         }
-    }, [status, router, refreshMutation]);
+    }, [status, router]);
 
-    // Wyświetlamy loader tylko w trakcie odświeżania sesji
     if (refreshMutation.isPending) {
         return (
             <div className="fixed inset-0 bg-white/80 z-50 flex items-center justify-center">
@@ -66,7 +64,6 @@ function PaymentStatus() {
     return null;
 }
 
-// Główny layout panelu
 export default function DashboardLayout({ children }: { children: React.ReactNode; }) {
     const { token, user, setToken } = useAuthStore();
     const router = useRouter();
