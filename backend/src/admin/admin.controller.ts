@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards, Param, Res } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Param, Res, Put } from '@nestjs/common';
 import { AdminGuard } from 'src/auth/guards/admin.guard';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
@@ -59,9 +59,19 @@ export class AdminController {
         return this.adminService.createProduct(body);
     }
 
+    @Put('products/:id')
+    updateProduct(@Param('id') productId: string, @Body() body: { name?: string, description?: string, isActive?: boolean }) {
+        return this.adminService.updateProduct(productId, body);
+    }
+
     @Post('products/:id/variants')
     addVariant(@Param('id') productId: string, @Body() body: { quantity: number; price: number; }) {
         return this.adminService.addVariantToProduct(productId, body);
+    }
+
+    @Put('products/variants/:variantId')
+    updateVariant(@Param('variantId') variantId: string, @Body() body: { quantity: number; price: number; }) {
+        return this.adminService.updateVariant(variantId, body);
     }
 
     @Get('categories')

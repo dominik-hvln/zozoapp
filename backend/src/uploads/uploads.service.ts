@@ -42,4 +42,25 @@ export class UploadsService {
 
         return { url: publicUrl };
     }
+
+    async uploadProductImage(file: Express.Multer.File, productId: string) {
+        const filePath = `products/${productId}-${Date.now()}`;
+
+        const { data, error } = await this.supabase.storage
+            .from('avatars') // Możemy używać tego samego "koszyka" (bucket)
+            .upload(filePath, file.buffer, { contentType: file.mimetype });
+
+        if (error) {
+            throw new InternalServerErrorException('Nie udało się wgrać zdjęcia produktu.');
+        }
+
+        const { data: { publicUrl } } = this.supabase.storage.from('avatars').getPublicUrl(data.path);
+
+        await this.prisma.products.update({
+            where: { id: productId },
+            data: { image_url: publicUrl },
+        });
+
+        return { url: publicUrl };
+    }
 }
