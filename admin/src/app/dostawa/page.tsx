@@ -17,10 +17,23 @@ import { Badge } from '@/components/ui/badge';
 
 // --- TYPY I FUNKCJE API ---
 interface ShippingMethod {
-    id: string; name: string; price: number; is_active: boolean;
+    id: string;
+    name: string;
+    price: number;
+    is_active: boolean;
 }
+
+// --- POPRAWKA TUTAJ ---
+// Definiujemy konkretny typ dla danych wysyłanych do API
+interface CreateShippingDto {
+    name: string;
+    price: number;
+    is_active: boolean;
+}
+
 const getShippingMethods = async (): Promise<ShippingMethod[]> => (await api.get('/admin/shipping')).data;
-const createShippingMethod = async (data: any) => (await api.post('/admin/shipping', data)).data;
+// Zastępujemy 'any' nowym, zdefiniowanym typem
+const createShippingMethod = async (data: CreateShippingDto) => (await api.post('/admin/shipping', data)).data;
 
 // --- KOMPONENT ---
 export default function AdminShippingPage() {
@@ -36,12 +49,16 @@ export default function AdminShippingPage() {
             queryClient.invalidateQueries({ queryKey: ['admin-shipping'] });
             toast.success('Metoda dostawy została utworzona!');
             setIsOpen(false);
+            setFormState({ name: '', price: 0, is_active: true }); // Reset formularza
+        },
+        onError: () => {
+            toast.error('Wystąpił błąd podczas tworzenia metody dostawy.');
         }
     });
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        const dataToSubmit = {
+        const dataToSubmit: CreateShippingDto = {
             ...formState,
             price: Math.round(formState.price * 100), // Cena w groszach
         };
@@ -49,22 +66,32 @@ export default function AdminShippingPage() {
     };
 
     return (
-        <div className="p-10 space-y-6">
+        <div className="p-4 md:p-6 lg:p-10 space-y-6">
             <div className="flex items-center justify-between">
-                <h1 className="text-3xl font-bold">Zarządzanie Dostawą</h1>
+                <h1 className="text-2xl md:text-3xl font-bold">Zarządzanie Dostawą</h1>
                 <Button onClick={() => setIsOpen(true)}><PlusCircle className="mr-2 h-4 w-4" />Dodaj Metodę</Button>
             </div>
 
-            <div className="border rounded-lg">
+            <div className="border rounded-lg overflow-x-auto">
                 <Table>
-                    <TableHeader><TableRow><TableHead>Nazwa</TableHead><TableHead>Cena</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Nazwa</TableHead>
+                            <TableHead>Cena</TableHead>
+                            <TableHead>Status</TableHead>
+                        </TableRow>
+                    </TableHeader>
                     <TableBody>
-                        {isLoading && <TableRow><TableCell colSpan={3}>Ładowanie...</TableCell></TableRow>}
+                        {isLoading && <TableRow><TableCell colSpan={3} className="text-center">Ładowanie...</TableCell></TableRow>}
                         {shippingMethods?.map(d => (
                             <TableRow key={d.id}>
-                                <TableCell>{d.name}</TableCell>
+                                <TableCell className="font-medium">{d.name}</TableCell>
                                 <TableCell>{(d.price / 100).toFixed(2)} zł</TableCell>
-                                <TableCell><Badge variant={d.is_active ? 'default' : 'destructive'}>{d.is_active ? 'Aktywna' : 'Nieaktywna'}</Badge></TableCell>
+                                <TableCell>
+                                    <Badge variant={d.is_active ? 'default' : 'destructive'}>
+                                        {d.is_active ? 'Aktywna' : 'Nieaktywna'}
+                                    </Badge>
+                                </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
@@ -74,11 +101,22 @@ export default function AdminShippingPage() {
             <Dialog open={isOpen} onOpenChange={setIsOpen}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>Nowa metoda dostawy</DialogTitle></DialogHeader>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div><Label>Nazwa</Label><Input value={formState.name} onChange={e => setFormState({...formState, name: e.target.value})} /></div>
-                        <div><Label>Cena (zł)</Label><Input type="number" step="0.01" value={formState.price} onChange={e => setFormState({...formState, price: Number(e.target.value)})} /></div>
-                        <div className="flex items-center space-x-2"><Switch checked={formState.is_active} onCheckedChange={c => setFormState({...formState, is_active: c})} /><Label>Aktywna</Label></div>
-                        <Button type="submit" className="w-full">Utwórz metodę</Button>
+                    <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                        <div>
+                            <Label htmlFor="name">Nazwa</Label>
+                            <Input id="name" value={formState.name} onChange={e => setFormState({...formState, name: e.target.value})} required />
+                        </div>
+                        <div>
+                            <Label htmlFor="price">Cena (zł)</Label>
+                            <Input id="price" type="number" step="0.01" value={formState.price} onChange={e => setFormState({...formState, price: Number(e.target.value)})} required />
+                        </div>
+                        <div className="flex items-center space-x-2 pt-2">
+                            <Switch id="is_active" checked={formState.is_active} onCheckedChange={c => setFormState({...formState, is_active: c})} />
+                            <Label htmlFor="is_active">Aktywna</Label>
+                        </div>
+                        <Button type="submit" className="w-full" disabled={mutation.isPending}>
+                            {mutation.isPending ? 'Tworzenie...' : 'Utwórz metodę'}
+                        </Button>
                     </form>
                 </DialogContent>
             </Dialog>
