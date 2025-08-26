@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { Prisma } from '@prisma/client';
 
 // Import komponentów
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -18,9 +17,21 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 
 // --- TYPY I FUNKCJE API ---
-type DiscountCode = Prisma.discount_codesGetPayload<{}>;
+// POPRAWKA: Definiujemy precyzyjny, bezpieczny typ
+interface DiscountCode {
+    id: string;
+    code: string;
+    type: 'PERCENTAGE' | 'FIXED_AMOUNT';
+    value: number;
+    is_active: boolean;
+    expires_at: string | null;
+    created_at: string;
+}
+// POPRAWKA: Definiujemy typ dla danych wejściowych
+type CreateDiscountCodeDto = Omit<DiscountCode, 'id' | 'created_at' | 'expires_at'>;
+
 const getDiscountCodes = async (): Promise<DiscountCode[]> => (await api.get('/admin/discounts')).data;
-const createDiscountCode = async (data: any) => (await api.post('/admin/discounts', data)).data;
+const createDiscountCode = async (data: CreateDiscountCodeDto) => (await api.post('/admin/discounts', data)).data;
 
 // --- KOMPONENT ---
 export default function AdminDiscountsPage() {
@@ -39,10 +50,10 @@ export default function AdminDiscountsPage() {
         mutationFn: createDiscountCode,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['admin-discounts'] });
-            toast.success('Kod rabatowy został pomyślnie utworzony w systemie i w Stripe!');
+            toast.success('Kod rabatowy został pomyślnie utworzony!');
             setIsOpen(false);
         },
-        onError: () => toast.error('Błąd podczas tworzenia kodu. Sprawdź, czy taki kod już nie istnieje.')
+        onError: () => toast.error('Błąd podczas tworzenia kodu.')
     });
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -82,9 +93,10 @@ export default function AdminDiscountsPage() {
                 <DialogContent>
                     <DialogHeader><DialogTitle>Nowy kod rabatowy</DialogTitle></DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-4 pt-4">
-                        <div><Label>Kod (np. LATO24)</Label><Input value={formState.code} onChange={e => setFormState({...formState, code: e.target.value.toUpperCase()})} /></div>
+                        <div><Label>Kod</Label><Input value={formState.code} onChange={e => setFormState({...formState, code: e.target.value.toUpperCase()})} /></div>
                         <div><Label>Typ</Label>
-                            <Select value={formState.type} onValueChange={(v: any) => setFormState({...formState, type: v})}>
+                            {/* POPRAWKA: Używamy poprawnego typu dla `onValueChange` */}
+                            <Select value={formState.type} onValueChange={(value: 'PERCENTAGE' | 'FIXED_AMOUNT') => setFormState({...formState, type: value})}>
                                 <SelectTrigger><SelectValue/></SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="PERCENTAGE">Procentowy (%)</SelectItem>
