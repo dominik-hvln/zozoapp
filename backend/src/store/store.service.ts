@@ -77,15 +77,13 @@ export class StoreService {
         }
     }
 
-    async createOneTimePaymentCheckoutSession(items: { priceId: string, quantity: number }[], userId: string) {
+    async createOneTimePaymentCheckoutSession(items: { priceId: string, quantity: number }[], userId: string, platform: 'web' | 'mobile') {
         const user = await this.prisma.users.findUnique({ where: { id: userId } });
         if (!user) {
             throw new NotFoundException('Użytkownik nie został znaleziony.');
         }
 
         const priceIds = items.map(item => item.priceId);
-
-        // Szukamy wariantów po ich stripe_price_id
         const variantsInDb = await this.prisma.product_variants.findMany({
             where: { stripe_price_id: { in: priceIds } },
         });
@@ -102,9 +100,13 @@ export class StoreService {
             };
         });
 
-        if (line_items.length === 0) {
-            throw new InternalServerErrorException('Koszyk jest pusty.');
-        }
+        const successUrl = platform === 'mobile'
+            ? `zozoapp://payment-complete?status=success&session_id={CHECKOUT_SESSION_ID}`
+            : `${process.env.FRONTEND_URL}/panel/zamowienie/{CHECKOUT_SESSION_ID}`;
+
+        const cancelUrl = platform === 'mobile'
+            ? `zozoapp://payment-complete?status=cancel`
+            : `${process.env.FRONTEND_URL}/panel/koszyk?status=cancel`;
 
         const session = await this.stripe.checkout.sessions.create({
             ui_mode: 'hosted',
@@ -112,8 +114,8 @@ export class StoreService {
             client_reference_id: userId,
             customer_email: user.email,
             line_items: line_items,
-                success_url: `${process.env.FRONTEND_URL}/panel/zamowienie/{CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_URL}/panel/koszyk?status=cancel`,
+            success_url: successUrl,
+            cancel_url: cancelUrl,
         });
 
         return session;

@@ -7,8 +7,8 @@ import { toast } from 'sonner';
 import { StaticImageData } from 'next/image';
 import Image from 'next/image';
 import { useState } from 'react';
-
-// Import komponentów
+import { Capacitor } from '@capacitor/core';
+import { Browser } from '@capacitor/browser';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,12 +17,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2 } from 'lucide-react';
-
-// Import awatarów - dostosuj do swoich plików
 import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
 
-// Mapowanie nazw produktów na obrazki
 const productImages: { [key: string]: StaticImageData } = {
     'Zestaw 5 Tatuaży ZozoApp': AppleIcon,
     'Inny Produkt': LemonIcon,
@@ -33,17 +30,24 @@ export default function KoszykPage() {
     const { items, removeItem, updateItemQuantity, clearCart } = useCartStore();
     const [promoCode, setPromoCode] = useState('');
 
-    // Logika obliczeń
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const shippingCost = subtotal > 10000 ? 0 : 999;
     const total = subtotal + shippingCost;
     const amountToFreeShipping = 10000 - subtotal;
 
     const checkoutMutation = useMutation({
-        mutationFn: (cartItems: { priceId: string, quantity: number }[]) => api.post('/store/checkout/payment', { items: cartItems }),
-        onSuccess: (response) => {
+        mutationFn: (cartItems: { priceId: string, quantity: number }[]) => {
+            const platform = Capacitor.isNativePlatform() ? 'mobile' : 'web';
+            return api.post('/store/checkout/payment', { items: cartItems, platform });
+        },
+        onSuccess: async (response) => {
+            const { url } = response.data;
             clearCart();
-            window.location.href = response.data.url;
+            if (Capacitor.isNativePlatform()) {
+                await Browser.open({ url });
+            } else {
+                window.location.href = url;
+            }
         },
         onError: () => toast.error('Wystąpił błąd podczas przechodzenia do płatności.'),
     });

@@ -24,8 +24,8 @@ export class StoreController {
 
     @UseGuards(JwtAuthGuard)
     @Post('checkout/payment')
-    createPaymentCheckout(@Request() req, @Body() body: { items: { priceId: string, quantity: number }[] }) {
-        return this.storeService.createOneTimePaymentCheckoutSession(body.items, req.user.userId);
+    createPaymentCheckout(@Request() req, @Body() body: { items: { priceId: string, quantity: number }[], platform: 'web' | 'mobile' }) {
+        return this.storeService.createOneTimePaymentCheckoutSession(body.items, req.user.userId, body.platform);
     }
 
     @UseGuards(JwtAuthGuard)
