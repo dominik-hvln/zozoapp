@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, UseGuards, Param, Res, Put } from '@nestjs
 import { AdminGuard } from 'src/auth/guards/admin.guard';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
+import { Prisma } from '@prisma/client';
 
 @UseGuards(AdminGuard)
 @Controller('admin')
@@ -82,5 +83,20 @@ export class AdminController {
     @Post('categories')
     createCategory(@Body('name') name: string) {
         return this.adminService.createCategory(name);
+    }
+
+    @Get('discounts')
+    getDiscounts() {
+        return this.adminService.getAllDiscountCodes();
+    }
+
+    @Post('discounts')
+    createDiscount(@Body() data: Prisma.discount_codesUncheckedCreateInput) {
+        return this.adminService.createDiscountCode(data);
+    }
+
+    @Put('discounts/:id')
+    updateDiscount(@Param('id') id: string, @Body() data: Prisma.discount_codesUncheckedUpdateInput) {
+        return this.adminService.updateDiscountCode(id, data);
     }
 }

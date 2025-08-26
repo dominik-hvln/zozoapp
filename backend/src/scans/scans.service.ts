@@ -35,6 +35,14 @@ export class ScansService {
             throw new NotFoundException('Nie znaleziono aktywnego tatuażu dla tego kodu.');
         }
 
+        const tenSecondsAgo = new Date(Date.now() - 10000); // 10 sekund temu
+        const recentScan = await this.prisma.scans.findFirst({
+            where: {
+                assignment_id: assignment.id,
+                scan_time: { gte: tenSecondsAgo }
+            }
+        });
+
         await this.notificationsService.create({
             user_id: assignment.user_id,
             type: 'SCAN',
@@ -42,22 +50,31 @@ export class ScansService {
             message: 'Ktoś właśnie zeskanował kod QR. Sprawdź e-mail, aby uzyskać więcej informacji.',
         });
 
-        const newScan = await this.prisma.scans.create({
-            data: {
-                assignment_id: assignment.id,
-                ip_address: ip,
-                user_agent: userAgent,
-            },
+        if (recentScan) {
+            console.log(`[SCAN] Zignorowano zduplikowany skan dla assignment ID: ${assignment.id}`);
+        } else {
+            await this.prisma.scans.create({
+                data: {
+                    assignment_id: assignment.id,
+                    ip_address: ip,
+                    user_agent: userAgent,
+                },
+            });
+
+            this.mailService.sendScanNotification(
+                assignment.users.email,
+                assignment.users.first_name ?? 'Opiekunie',
+                assignment.children.name,
+            );
+        }
+
+        const latestScan = await this.prisma.scans.findFirst({
+            where: { assignment_id: assignment.id },
+            orderBy: { scan_time: 'desc' }
         });
 
-        this.mailService.sendScanNotification(
-            assignment.users.email,
-            assignment.users.first_name ?? 'Opiekunie',
-            assignment.children.name,
-        );
-
         return {
-            scanId: newScan.id,
+            scanId: latestScan!.id,
             child: {
                 name: assignment.children.name,
                 age: this.calculateAge(assignment.children.date_of_birth),

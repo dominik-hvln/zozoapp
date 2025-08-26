@@ -32,7 +32,7 @@ export function ChildrenBlock() {
                     {children?.map((child) => {
                         const FallbackIcon = getFallbackAvatar(child.id);
                         return (
-                            <Link href={`/panel/dzieci/${child.id}`} key={child.id} className="text-center">
+                            <Link href={`/panel/dzieci/${child.id}`} key={child.id} className="text-center border rounded-lg p-3 hover:bg-gray-50">
                                 <Avatar className="w-20 h-20 mx-auto">
                                     <AvatarImage src={child.avatar_url || undefined} alt={child.name} />
                                     <AvatarFallback className="bg-gray-100 p-2">

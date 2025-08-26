@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShieldCheck, Users, Sticker, Package, LogOut } from 'lucide-react';
+import { ShieldCheck, Users, Sticker, Package, LogOut, TicketPercent } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 
 const links = [
@@ -10,6 +10,7 @@ const links = [
     { href: '/users', label: 'Użytkownicy', icon: Users },
     { href: '/tattoos', label: 'Tatuaże', icon: Sticker },
     { href: '/produkty', label: 'Produkty', icon: Package },
+    { href: '/rabaty', label: 'Kody Rabatowe', icon: TicketPercent }
 ];
 
 export function Sidebar() {

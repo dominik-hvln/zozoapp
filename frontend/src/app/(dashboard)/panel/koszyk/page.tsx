@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { StaticImageData } from 'next/image';
 import Image from 'next/image';
 import { useState } from 'react';
+import { AxiosError } from 'axios';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { Button } from '@/components/ui/button';
@@ -25,20 +26,37 @@ const productImages: { [key: string]: StaticImageData } = {
     'Inny Produkt': LemonIcon,
 };
 
+interface AppliedDiscount {
+    code: string;
+    discount: {
+        type: 'PERCENTAGE' | 'FIXED_AMOUNT';
+        value: number;
+    }
+}
+
 
 export default function KoszykPage() {
     const { items, removeItem, updateItemQuantity, clearCart } = useCartStore();
     const [promoCode, setPromoCode] = useState('');
+    const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
 
     const subtotal = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
     const shippingCost = subtotal > 10000 ? 0 : 999;
-    const total = subtotal + shippingCost;
+    let discountAmount = 0;
+    if (appliedDiscount) {
+        if (appliedDiscount.discount.type === 'PERCENTAGE') {
+            discountAmount = (subtotal * appliedDiscount.discount.value) / 100;
+        } else {
+            discountAmount = appliedDiscount.discount.value;
+        }
+    }
+    const total = subtotal + shippingCost - discountAmount;
     const amountToFreeShipping = 10000 - subtotal;
 
     const checkoutMutation = useMutation({
         mutationFn: (cartItems: { priceId: string, quantity: number }[]) => {
             const platform = Capacitor.isNativePlatform() ? 'mobile' : 'web';
-            return api.post('/store/checkout/payment', { items: cartItems, platform });
+            return api.post('/store/checkout/payment', { items: cartItems, platform, couponCode: appliedDiscount?.code });
         },
         onSuccess: async (response) => {
             const { url } = response.data;
@@ -52,6 +70,18 @@ export default function KoszykPage() {
         onError: () => toast.error('Wystąpił błąd podczas przechodzenia do płatności.'),
     });
 
+    const promoMutation = useMutation({
+        mutationFn: (code: string) => api.post('/store/validate-promo', { code }),
+        onSuccess: (response) => {
+            setAppliedDiscount(response.data);
+            toast.success(`Kod rabatowy "${response.data.code}" został pomyślnie zastosowany!`);
+        },
+        onError: (error: AxiosError) => {
+            const errorMessage = (error.response?.data as { message: string })?.message || 'Wystąpił błąd.';
+            toast.error('Błąd kodu rabatowego', { description: errorMessage });
+        }
+    });
+
     const handleCheckout = () => {
         const itemsToCheckout = items.map(item => ({
             priceId: item.stripePriceId,
@@ -61,7 +91,8 @@ export default function KoszykPage() {
     };
 
     const handleApplyPromoCode = () => {
-        toast.info('Funkcjonalność kodów rabatowych jest w trakcie przygotowania.');
+        if (!promoCode) return;
+        promoMutation.mutate(promoCode);
     };
 
     return (
@@ -136,6 +167,10 @@ export default function KoszykPage() {
                                             <span>{(subtotal / 100).toFixed(2)} zł</span>
                                         </div>
                                         <div className="flex justify-between text-sm">
+                                            <span className="text-muted-foreground">Rabat:</span>
+                                            <span>{(discountAmount / 100).toFixed(2)} zł</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
                                             <span className="text-muted-foreground">Koszt dostawy:</span>
                                             <span>{(shippingCost / 100).toFixed(2)} zł</span>
                                         </div>
@@ -154,8 +189,10 @@ export default function KoszykPage() {
                                         <div className="space-y-2">
                                             <Label htmlFor="rabat" className="text-xs font-semibold">Kod rabatowy</Label>
                                             <div className="flex gap-2">
-                                                <Input id="rabat" placeholder="Wprowadź kod" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} />
-                                                <Button variant="outline" onClick={handleApplyPromoCode}>Zastosuj</Button>
+                                                <Input id="rabat" placeholder="Wprowadź kod" value={promoCode} onChange={(e) => setPromoCode(e.target.value.toUpperCase())} />
+                                                <Button variant="outline" onClick={handleApplyPromoCode} disabled={promoMutation.isPending}>
+                                                    {promoMutation.isPending ? '...' : 'Zastosuj'}
+                                                </Button>
                                             </div>
                                         </div>
                                         <Button onClick={handleCheckout} disabled={checkoutMutation.isPending} className="w-full bg-[#FFA800] hover:bg-orange-400 h-12 text-base font-bold rounded-2xl">

@@ -263,4 +263,40 @@ export class AdminService {
             },
         });
     }
+
+    getAllDiscountCodes() {
+        return this.prisma.discount_codes.findMany({
+            orderBy: { created_at: 'desc' },
+        });
+    }
+
+    async createDiscountCode(data: Omit<Prisma.discount_codesUncheckedCreateInput, 'id' | 'created_at'>) {
+        // Krok 1: Stwórz Kupon w Stripe
+        const couponParams: Stripe.CouponCreateParams = {
+            duration: 'once', // Kupon jednorazowy
+        };
+        if (data.type === 'PERCENTAGE') {
+            couponParams.percent_off = data.value;
+        } else {
+            couponParams.amount_off = data.value; // Wartość w groszach
+            couponParams.currency = 'pln';
+        }
+        const coupon = await this.stripe.coupons.create(couponParams);
+
+        // Krok 2: Stwórz Kod Promocyjny w Stripe, powiązany z Kuponem
+        await this.stripe.promotionCodes.create({
+            coupon: coupon.id,
+            code: data.code,
+        });
+
+        // Krok 3: Zapisz kod w naszej bazie danych
+        return this.prisma.discount_codes.create({ data });
+    }
+
+    updateDiscountCode(id: string, data: Prisma.discount_codesUncheckedUpdateInput) {
+        return this.prisma.discount_codes.update({
+            where: { id },
+            data,
+        });
+    }
 }

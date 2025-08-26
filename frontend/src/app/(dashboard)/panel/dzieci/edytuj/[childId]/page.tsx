@@ -105,66 +105,70 @@ export default function DzieckoEditFormPage() {
     const FallbackIcon = AppleIcon;
 
     return (
-        <div className="space-y-6">
-            <Link href={`/panel/dzieci/${childId}`}><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4"/> Anuluj i wróć do podglądu</Button></Link>
-            <Card className="max-w-2xl mx-auto">
-                <CardHeader>
-                    <CardTitle>Edytuj profil dziecka</CardTitle>
-                    <CardDescription>Zaktualizuj poniższe informacje.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex justify-center mb-6">
-                        <div className="relative group">
-                            <Avatar className="w-24 h-24 border-4 border-white shadow-md">
-                                <AvatarImage src={child.avatar_url || undefined} alt={child.name} key={child.avatar_url} />
-                                <AvatarFallback className="p-2 bg-gray-100"><Image src={FallbackIcon} alt="Owoc" /></AvatarFallback>
-                            </Avatar>
-                            <div
-                                onClick={handleAvatarClick}
-                                className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
-                            >
-                                <Upload className="h-8 w-8 text-white" />
+        <Card>
+            <CardContent>
+                <div className="space-y-6">
+                    <Link href={`/panel/dzieci/${childId}`}><Button variant="outline"><ArrowLeft className="mr-2 h-4 w-4"/> Anuluj i wróć do podglądu</Button></Link>
+                    <Card className="max-w-2xl mx-auto mt-4">
+                        <CardHeader>
+                            <CardTitle>Edytuj profil dziecka</CardTitle>
+                            <CardDescription>Zaktualizuj poniższe informacje.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex justify-center mb-6">
+                                <div className="relative group">
+                                    <Avatar className="w-24 h-24 border-4 border-white shadow-md">
+                                        <AvatarImage src={child.avatar_url || undefined} alt={child.name} key={child.avatar_url} />
+                                        <AvatarFallback className="p-2 bg-gray-100"><Image src={FallbackIcon} alt="Owoc" /></AvatarFallback>
+                                    </Avatar>
+                                    <div
+                                        onClick={handleAvatarClick}
+                                        className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+                                    >
+                                        <Upload className="h-8 w-8 text-white" />
+                                    </div>
+                                </div>
+                                <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/png, image/jpeg, image/jpg" />
                             </div>
-                        </div>
-                        <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" accept="image/png, image/jpeg, image/jpg" />
-                    </div>
-                    <form onSubmit={handleFormSubmit} className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name">Imię</Label>
-                            <Input id="name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
-                        </div>
-                        <div className="space-y-2 flex flex-col">
-                            <Label>Data urodzenia</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !formData.date_of_birth && "text-muted-foreground")}>
-                                        {formData.date_of_birth ? format(formData.date_of_birth, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0 z-[100]" align="start">
-                                    <Calendar locale={pl} mode="single" selected={formData.date_of_birth} onSelect={(date) => setFormData({...formData, date_of_birth: date})} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus captionLayout="dropdown" fromYear={new Date().getFullYear() - 20} toYear={new Date().getFullYear()} />
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="important_info">Ważne informacje</Label>
-                            <Textarea id="important_info" value={formData.important_info} onChange={(e) => setFormData({...formData, important_info: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="illnesses">Choroby</Label>
-                            <Textarea id="illnesses" value={formData.illnesses} onChange={(e) => setFormData({...formData, illnesses: e.target.value})} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="allergies">Uczulenia</Label>
-                            <Textarea id="allergies" value={formData.allergies} onChange={(e) => setFormData({...formData, allergies: e.target.value})} />
-                        </div>
-                        <Button type="submit" disabled={updateMutation.isPending} className="w-full">
-                            {updateMutation.isPending ? "Zapisywanie..." : "Zapisz zmiany"}
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
-        </div>
+                            <form onSubmit={handleFormSubmit} className="space-y-4 pt-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="name">Imię</Label>
+                                    <Input id="name" value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
+                                </div>
+                                <div className="space-y-2 flex flex-col">
+                                    <Label>Data urodzenia</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !formData.date_of_birth && "text-muted-foreground")}>
+                                                {formData.date_of_birth ? format(formData.date_of_birth, "PPP", { locale: pl }) : <span>Wybierz datę</span>}
+                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                                            <Calendar locale={pl} mode="single" selected={formData.date_of_birth} onSelect={(date) => setFormData({...formData, date_of_birth: date})} disabled={(date) => date > new Date() || date < new Date("1900-01-01")} initialFocus captionLayout="dropdown" fromYear={new Date().getFullYear() - 20} toYear={new Date().getFullYear()} />
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="important_info">Ważne informacje</Label>
+                                    <Textarea id="important_info" value={formData.important_info} onChange={(e) => setFormData({...formData, important_info: e.target.value})} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="illnesses">Choroby</Label>
+                                    <Textarea id="illnesses" value={formData.illnesses} onChange={(e) => setFormData({...formData, illnesses: e.target.value})} />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="allergies">Uczulenia</Label>
+                                    <Textarea id="allergies" value={formData.allergies} onChange={(e) => setFormData({...formData, allergies: e.target.value})} />
+                                </div>
+                                <Button type="submit" disabled={updateMutation.isPending} className="w-full">
+                                    {updateMutation.isPending ? "Zapisywanie..." : "Zapisz zmiany"}
+                                </Button>
+                            </form>
+                        </CardContent>
+                    </Card>
+                </div>
+            </CardContent>
+        </Card>
     );
 }

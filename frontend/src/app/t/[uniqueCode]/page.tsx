@@ -6,8 +6,7 @@ import { api } from '@/lib/api';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Phone, HeartPulse, ShieldAlert, Info, Loader2 } from "lucide-react";
-import LocationHandler from "./LocationHandler";
+import { Phone, HeartPulse, ShieldAlert, Info, Loader2, MapPin } from "lucide-react";
 import Image from "next/image";
 import AppleIcon from '@/assets/avatars/apple.svg';
 
@@ -15,17 +14,33 @@ import AppleIcon from '@/assets/avatars/apple.svg';
 interface ScanData {
     scanId: string;
     child: {
-        name: string;
-        age: number | null;
-        avatar_url: string | null;
-        important_info: string | null;
-        illnesses: string | null;
-        allergies: string | null;
+        name: string; age: number | null; avatar_url: string | null;
+        important_info: string | null; illnesses: string | null; allergies: string | null;
     };
-    parent: {
-        fullName: string;
-        phone: string | null;
-    };
+    parent: { fullName: string; phone: string | null; };
+}
+
+// --- KOMPONENT DO OBSŁUGI LOKALIZACJI ---
+function LocationHandler({ scanId }: { scanId: string }) {
+    const [status, setStatus] = useState<'pending' | 'success' | 'error'>('pending');
+
+    useEffect(() => {
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setStatus('success');
+                api.post(`/scans/${scanId}/location`, {
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                });
+            },
+            () => setStatus('error'),
+            { timeout: 10000, enableHighAccuracy: true }
+        );
+    }, [scanId]);
+
+    if (status === 'pending') return <p className="text-sm text-muted-foreground flex items-center justify-center gap-2"><Loader2 className="h-4 w-4 animate-spin"/> Oczekiwanie na zgodę na lokalizację...</p>;
+    if (status === 'success') return <p className="text-sm text-green-600 font-semibold flex items-center justify-center gap-2"><MapPin className="h-4 w-4"/> Lokalizacja została wysłana do rodzica.</p>;
+    return <p className="text-sm text-red-500">Nie udało się pobrać lokalizacji.</p>;
 }
 
 // --- GŁÓWNY KOMPONENT STRONY ---

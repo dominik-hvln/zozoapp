@@ -125,3 +125,13 @@
 body {
     background-color: #F2EDE5;
 }
+
+.product_qty {
+    border-radius: 20px !important;
+    border: 1px solid #466EC6;
+}
+
+.data-\[state\=on\]\:bg-accent[data-state="on"] {
+    background-color: #466EC6;
+    color: #fff !important;
+}

@@ -24,13 +24,19 @@ export class StoreController {
 
     @UseGuards(JwtAuthGuard)
     @Post('checkout/payment')
-    createPaymentCheckout(@Request() req, @Body() body: { items: { priceId: string, quantity: number }[], platform: 'web' | 'mobile' }) {
-        return this.storeService.createOneTimePaymentCheckoutSession(body.items, req.user.userId, body.platform);
+    createPaymentCheckout(@Request() req, @Body() body: { items: { priceId: string, quantity: number }[], platform: 'web' | 'mobile', couponCode?: string }) {
+        return this.storeService.createOneTimePaymentCheckoutSession(body.items, req.user.userId, body.platform, body.couponCode);
     }
 
     @UseGuards(JwtAuthGuard)
     @Post('customer-portal')
     createCustomerPortal(@Request() req) {
         return this.storeService.createCustomerPortalSession(req.user.userId);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('validate-promo')
+    validatePromoCode(@Body('code') code: string) {
+        return this.storeService.validatePromoCode(code);
     }
 }

@@ -72,7 +72,13 @@ function ProductCard({ product }: { product: Product }) {
     return (
         <Card className="flex flex-col md:flex-row p-4">
             <CardHeader className="p-0 w-full md:w-49 md:min-w-49">
-                <Image src={image} alt={product.name} className="w-full h-30 md:h-48 object-contain rounded-t-lg" />
+                <Image
+                    src={product.image_url || AppleIcon}
+                    alt={product.name}
+                    width={300}
+                    height={200}
+                    className="w-full h-30 md:h-48 object-contain rounded-t-lg"
+                />
             </CardHeader>
             <CardContent className="p-0 flex flex-col flex-grow">
                 <CardTitle className="text-lg">{product.name}</CardTitle>
@@ -83,19 +89,19 @@ function ProductCard({ product }: { product: Product }) {
                         type="single"
                         value={selectedVariantId}
                         onValueChange={(value) => { if (value) setSelectedVariantId(value) }}
-                        className="justify-start"
+                        className="justify-start gap-2"
                     >
                         {product.product_variants.map(variant => (
-                            <ToggleGroupItem key={variant.id} value={variant.id} className="text-xs h-8">
+                            <ToggleGroupItem key={variant.id} value={variant.id} className="text-xs h-8 px-3 product_qty">
                                 {variant.quantity} szt.
                             </ToggleGroupItem>
                         ))}
                     </ToggleGroup>
                 </div>
                 <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                    <p className="text-2xl font-bold">{(selectedVariant?.price || 0) / 100} zł</p>
-                    <Button onClick={handleAddToCart} size="sm">
-                        <ShoppingCart className="mr-2 h-4 w-4" /> Dodaj
+                    <p className="text-2xl text-[#466EC6] font-bold">{(selectedVariant?.price || 0) / 100} zł</p>
+                    <Button onClick={handleAddToCart} size="lg" className="bg-orange-400 hover:bg-orange-500 rounded-[22px] py-3 px-4">
+                        <ShoppingCart className="mr-2 h-4 w-4" /> Dodaj do koszyka
                     </Button>
                 </div>
             </CardContent>

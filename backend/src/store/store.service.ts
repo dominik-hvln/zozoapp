@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import Stripe from 'stripe';
 import { Prisma } from '@prisma/client';
@@ -77,7 +77,34 @@ export class StoreService {
         }
     }
 
-    async createOneTimePaymentCheckoutSession(items: { priceId: string, quantity: number }[], userId: string, platform: 'web' | 'mobile') {
+    async validatePromoCode(code: string) {
+        try {
+            const promotionCodes = await this.stripe.promotionCodes.list({
+                code: code,
+                active: true,
+                limit: 1,
+            });
+
+            if (promotionCodes.data.length === 0) {
+                throw new BadRequestException('Kod rabatowy jest nieprawidłowy lub wygasł.');
+            }
+
+            const promoCode = promotionCodes.data[0];
+            const coupon = await this.stripe.coupons.retrieve(promoCode.coupon.id);
+
+            return {
+                code: promoCode.code,
+                discount: {
+                    type: coupon.percent_off ? 'PERCENTAGE' : 'FIXED_AMOUNT',
+                    value: coupon.percent_off || coupon.amount_off,
+                },
+            };
+        } catch (error) {
+            throw new BadRequestException('Kod rabatowy jest nieprawidłowy lub wygasł.');
+        }
+    }
+
+    async createOneTimePaymentCheckoutSession(items: { priceId: string, quantity: number }[], userId: string, platform: 'web' | 'mobile', couponCode?: string) {
         const user = await this.prisma.users.findUnique({ where: { id: userId } });
         if (!user) {
             throw new NotFoundException('Użytkownik nie został znaleziony.');
@@ -108,7 +135,7 @@ export class StoreService {
             ? `zozoapp://payment-complete?status=cancel`
             : `${process.env.FRONTEND_URL}/panel/koszyk?status=cancel`;
 
-        const session = await this.stripe.checkout.sessions.create({
+        const sessionPayload: Stripe.Checkout.SessionCreateParams = {
             ui_mode: 'hosted',
             mode: 'payment',
             client_reference_id: userId,
@@ -116,8 +143,26 @@ export class StoreService {
             line_items: line_items,
             success_url: successUrl,
             cancel_url: cancelUrl,
-        });
+        };
 
+        if (couponCode) {
+            try {
+                const promotionCodes = await this.stripe.promotionCodes.list({
+                    code: couponCode,
+                    active: true,
+                    limit: 1,
+                });
+                if (promotionCodes.data.length > 0) {
+                    sessionPayload.discounts = [{ promotion_code: promotionCodes.data[0].id }];
+                } else {
+                    throw new BadRequestException('Kod rabatowy jest nieprawidłowy lub wygasł.');
+                }
+            } catch (error) {
+                throw new BadRequestException('Kod rabatowy jest nieprawidłowy lub wygasł.');
+            }
+        }
+
+        const session = await this.stripe.checkout.sessions.create(sessionPayload);
         return session;
     }
 
