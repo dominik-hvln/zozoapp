@@ -10,7 +10,8 @@ const links = [
     { href: '/users', label: 'Użytkownicy', icon: Users },
     { href: '/tattoos', label: 'Tatuaże', icon: Sticker },
     { href: '/produkty', label: 'Produkty', icon: Package },
-    { href: '/rabaty', label: 'Kody Rabatowe', icon: TicketPercent }
+    { href: '/rabaty', label: 'Kody Rabatowe', icon: TicketPercent },
+    { href: '/dostawa', label: 'Dostawa', icon: TicketPercent }
 ];
 
 export function Sidebar() {

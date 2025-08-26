@@ -299,4 +299,63 @@ export class AdminService {
             data,
         });
     }
+
+    getAllShippingMethods() {
+        return this.prisma.shipping_methods.findMany({
+            orderBy: { created_at: 'desc' },
+        });
+    }
+
+    async createShippingMethod(data: Omit<Prisma.shipping_methodsUncheckedCreateInput, 'id' | 'created_at' | 'stripe_shipping_rate_id'>) {
+        // Krok 1: Stwórz stawkę dostawy w Stripe
+        const shippingRate = await this.stripe.shippingRates.create({
+            display_name: data.name,
+            type: 'fixed_amount',
+            fixed_amount: {
+                amount: data.price, // Cena w groszach
+                currency: 'pln',
+            },
+        });
+
+        // Krok 2: Zapisz metodę dostawy w naszej bazie
+        return this.prisma.shipping_methods.create({
+            data: {
+                ...data,
+                stripe_shipping_rate_id: shippingRate.id,
+            },
+        });
+    }
+
+    async updateShippingMethod(id: string, data: Omit<Prisma.shipping_methodsUncheckedUpdateInput, 'id' | 'created_at' | 'stripe_shipping_rate_id'>) {
+        const existingMethod = await this.prisma.shipping_methods.findUnique({ where: { id } });
+        if (!existingMethod) {
+            throw new NotFoundException('Metoda dostawy nie została znaleziona.');
+        }
+
+        // Krok 1: Zdezaktywuj starą stawkę w Stripe (Stripe nie pozwala na edycję ceny)
+        if (existingMethod.stripe_shipping_rate_id) {
+            await this.stripe.shippingRates.update(existingMethod.stripe_shipping_rate_id, { active: false });
+        }
+
+        // Krok 2: Stwórz nową stawkę w Stripe
+        const newShippingRate = await this.stripe.shippingRates.create({
+            display_name: data.name as string,
+            type: 'fixed_amount',
+            fixed_amount: {
+                amount: data.price as number,
+                currency: 'pln',
+            },
+        });
+
+        // Krok 3: Zaktualizuj metodę dostawy w naszej bazie
+        return this.prisma.shipping_methods.update({
+            where: { id },
+            data: {
+                name: data.name as string,
+                price: data.price as number,
+                is_active: data.is_active as boolean,
+                stripe_shipping_rate_id: newShippingRate.id,
+            },
+        });
+    }
 }

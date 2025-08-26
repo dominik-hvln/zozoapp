@@ -99,4 +99,19 @@ export class AdminController {
     updateDiscount(@Param('id') id: string, @Body() data: Prisma.discount_codesUncheckedUpdateInput) {
         return this.adminService.updateDiscountCode(id, data);
     }
+
+    @Get('shipping')
+    getShippingMethods() {
+        return this.adminService.getAllShippingMethods();
+    }
+
+    @Post('shipping')
+    createShippingMethod(@Body() data: Prisma.shipping_methodsUncheckedCreateInput) {
+        return this.adminService.createShippingMethod(data);
+    }
+
+    @Put('shipping/:id')
+    updateShippingMethod(@Param('id') id: string, @Body() data: Prisma.shipping_methodsUncheckedUpdateInput) {
+        return this.adminService.updateShippingMethod(id, data);
+    }
 }

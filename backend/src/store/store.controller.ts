@@ -1,6 +1,13 @@
-import { Controller, Get, Post, Request, UseGuards, Body, Query } from '@nestjs/common';
+import { Controller, Get, Post, Request, UseGuards, Body, Query, Req } from '@nestjs/common';
 import { StoreService } from './store.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+
+class CreateCheckoutDto {
+    items: { priceId: string, quantity: number }[];
+    platform: 'web' | 'mobile';
+    couponCode?: string;
+    shippingMethodId: string;
+}
 
 @Controller('store')
 export class StoreController {
@@ -24,8 +31,10 @@ export class StoreController {
 
     @UseGuards(JwtAuthGuard)
     @Post('checkout/payment')
-    createPaymentCheckout(@Request() req, @Body() body: { items: { priceId: string, quantity: number }[], platform: 'web' | 'mobile', couponCode?: string }) {
-        return this.storeService.createOneTimePaymentCheckoutSession(body.items, req.user.userId, body.platform, body.couponCode);
+    createCheckoutSession(@Req() req: Request, @Body() checkoutDto: CreateCheckoutDto) {
+        const userId = (req as any).user.userId;
+
+        return this.storeService.createOneTimePaymentCheckoutSession(userId, checkoutDto);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -38,5 +47,11 @@ export class StoreController {
     @Post('validate-promo')
     validatePromoCode(@Body('code') code: string) {
         return this.storeService.validatePromoCode(code);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('shipping')
+    getShipping() {
+        return this.storeService.getActiveShippingMethods();
     }
 }

@@ -186,6 +186,15 @@ model discount_codes {
   created_at DateTime      @default(now()) @db.Timestamptz(6)
 }
 
+model shipping_methods {
+  id                      String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                    String   @unique
+  price                   Int
+  is_active               Boolean  @default(true)
+  stripe_shipping_rate_id String?
+  created_at              DateTime @default(now()) @db.Timestamptz(6)
+}
+
 enum discount_type {
   PERCENTAGE
   FIXED_AMOUNT

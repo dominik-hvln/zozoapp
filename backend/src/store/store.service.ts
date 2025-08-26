@@ -3,6 +3,13 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import Stripe from 'stripe';
 import { Prisma } from '@prisma/client';
 
+class CreateCheckoutDto {
+    items: { priceId: string, quantity: number }[];
+    platform: 'web' | 'mobile';
+    couponCode?: string;
+    shippingMethodId: string;
+}
+
 @Injectable()
 export class StoreService {
     private stripe: Stripe;
@@ -104,10 +111,32 @@ export class StoreService {
         }
     }
 
-    async createOneTimePaymentCheckoutSession(items: { priceId: string, quantity: number }[], userId: string, platform: 'web' | 'mobile', couponCode?: string) {
+    async getActiveShippingMethods() {
+        return this.prisma.shipping_methods.findMany({
+            where: { is_active: true },
+            select: { id: true, name: true, price: true, is_active: true },
+            orderBy: { price: 'asc' },
+        });
+    }
+
+    async createOneTimePaymentCheckoutSession(userId: string, checkoutDto: CreateCheckoutDto) {
+        const { items, platform, couponCode, shippingMethodId } = checkoutDto;
+
         const user = await this.prisma.users.findUnique({ where: { id: userId } });
         if (!user) {
             throw new NotFoundException('Użytkownik nie został znaleziony.');
+        }
+
+        // --- Sprawdzenie metody dostawy (Twoja logika jest tutaj poprawna) ---
+        const shippingMethod = await this.prisma.shipping_methods.findUnique({
+            where: {
+                id: shippingMethodId,
+                is_active: true,
+            }
+        });
+
+        if (!shippingMethod || !shippingMethod.stripe_shipping_rate_id) {
+            throw new BadRequestException('Wybrana metoda dostawy jest nieprawidłowa.');
         }
 
         const priceIds = items.map(item => item.priceId);
@@ -141,6 +170,7 @@ export class StoreService {
             client_reference_id: userId,
             customer_email: user.email,
             line_items: line_items,
+            shipping_options: [{ shipping_rate: shippingMethod.stripe_shipping_rate_id }],
             success_url: successUrl,
             cancel_url: cancelUrl,
         };
@@ -155,7 +185,8 @@ export class StoreService {
                 if (promotionCodes.data.length > 0) {
                     sessionPayload.discounts = [{ promotion_code: promotionCodes.data[0].id }];
                 } else {
-                    throw new BadRequestException('Kod rabatowy jest nieprawidłowy lub wygasł.');
+                    // Rzucamy błąd, jeśli kod jest nieaktywny
+                    throw new Error();
                 }
             } catch (error) {
                 throw new BadRequestException('Kod rabatowy jest nieprawidłowy lub wygasł.');
@@ -163,7 +194,8 @@ export class StoreService {
         }
 
         const session = await this.stripe.checkout.sessions.create(sessionPayload);
-        return session;
+        // Zwracamy tylko URL, tak jak wcześniej
+        return { url: session.url };
     }
 
     async createCustomerPortalSession(userId: string) {
