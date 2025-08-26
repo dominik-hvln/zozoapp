@@ -34,6 +34,7 @@ interface ProductVariant {
     stripe_price_id: string;
 }
 interface Product {
+    image_url: string;
     id: string;
     name: string;
     description: string | null;
