@@ -13,7 +13,8 @@ import { Browser } from '@capacitor/browser';
 import { Header } from '@/components/layout/Header';
 import { PartyPopper, XCircle, Loader2 } from 'lucide-react';
 import { App } from '@capacitor/app';
-import { cn } from '@/lib/utils'; // Upewnij się, że ten import istnieje
+import { cn } from '@/lib/utils';
+import { initializePushNotifications } from '@/lib/push-notifications.service';
 
 // --- FUNKCJE API (bez zmian) ---
 const getFullProfile = async () => (await api.get('/auth/profile')).data;
@@ -107,14 +108,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
     useEffect(() => {
         initializeAuth();
-        // --- NOWA LOGIKA ---
-        // Sprawdzamy platformę przy starcie komponentu.
         setIsNative(Capacitor.isNativePlatform());
     }, [initializeAuth]);
 
     useEffect(() => {
         if (isInitialized && !token) {
             router.push('/login');
+        }
+        if (isInitialized && token) {
+            initializePushNotifications();
         }
     }, [token, router, isInitialized]);
 

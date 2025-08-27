@@ -61,11 +61,25 @@ export class ScansService {
                 },
             });
 
-            this.mailService.sendScanNotification(
-                assignment.users.email,
-                assignment.users.first_name ?? 'Opiekunie',
-                assignment.children.name,
-            );
+            try {
+                // 1. Wyślij e-mail (istniejąca funkcja)
+                this.mailService.sendScanNotification(
+                    assignment.users.email,
+                    assignment.users.first_name ?? 'Opiekunie',
+                    assignment.children.name,
+                );
+
+                // 2. Wyślij powiadomienie PUSH (nowa funkcja)
+                await this.notificationsService.sendNotificationToUser(assignment.user_id, {
+                    notification: {
+                        title: '🔔 Alert Bezpieczeństwa Zozo!',
+                        body: `Tatuaż Twojego dziecka "${assignment.children.name}" został właśnie zeskanowany!`,
+                    }
+                });
+
+            } catch (error) {
+                console.error(`[ScansService] Błąd podczas wysyłania powiadomień dla użytkownika ${assignment.user_id}`, error);
+            }
         }
 
         const latestScan = await this.prisma.scans.findFirst({
