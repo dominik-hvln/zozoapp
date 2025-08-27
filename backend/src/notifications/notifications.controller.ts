@@ -27,15 +27,25 @@ export class NotificationsController {
     @Post('register-device')
     async registerDevice(@Body() registerDeviceDto: RegisterDeviceDto, @Req() req: Request) {
         const userId = (req as any).user.userId;
-        console.log(`[NOTIFICATIONS] Rejestracja urządzenia dla użytkownika: ${userId}`);
+        console.log(`[NOTIFICATIONS] Otrzymano żądanie rejestracji urządzenia`);
+        console.log(`[NOTIFICATIONS] Użytkownik ID: ${userId}`);
         console.log(`[NOTIFICATIONS] Token FCM: ${registerDeviceDto.token.substring(0, 20)}...`);
+        console.log(`[NOTIFICATIONS] Pełny token FCM: ${registerDeviceDto.token}`);
 
         try {
             await this.notificationsService.saveToken(userId, registerDeviceDto.token);
-            console.log(`[NOTIFICATIONS] Pomyślnie zarejestrowano urządzenie dla użytkownika: ${userId}`);
-            return { success: true, message: 'Device token registered successfully' };
+            console.log(`[NOTIFICATIONS] ✅ Pomyślnie zarejestrowano urządzenie dla użytkownika: ${userId}`);
+            const response = {
+                success: true,
+                message: 'Device token registered successfully',
+                userId: userId,
+                tokenPreview: registerDeviceDto.token.substring(0, 20) + '...'
+            };
+            console.log(`[NOTIFICATIONS] Odpowiedź do klienta:`, response);
+            return response;
         } catch (error) {
-            console.error(`[NOTIFICATIONS] Błąd podczas rejestracji urządzenia:`, error);
+            console.error(`[NOTIFICATIONS] ❌ Błąd podczas rejestracji urządzenia:`, error);
+            console.error(`[NOTIFICATIONS] Stack trace:`, error.stack);
             throw error;
         }
     }

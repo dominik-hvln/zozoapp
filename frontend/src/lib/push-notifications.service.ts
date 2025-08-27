@@ -26,20 +26,30 @@ export const initializePushNotifications = (): void => {
 
             if (!currentToken) {
                 console.error('[PUSH] Brak tokena uwierzytelniania - użytkownik nie jest zalogowany');
+                toast.error('Nie można zarejestrować urządzenia - brak uwierzytelniania');
                 return;
             }
 
-            await api.post('/notifications/register-device', { token });
+            console.log('[PUSH] Wysyłanie żądania do /notifications/register-device...');
+            const response = await api.post('/notifications/register-device', { token });
+            console.log('[PUSH] Odpowiedź z serwera:', response.data);
             console.log('[PUSH] Token pomyślnie zarejestrowany na serwerze');
+            toast.success('Urządzenie zostało zarejestrowane dla powiadomień');
         } catch (error: unknown) {
             console.error('[PUSH] Błąd podczas rejestracji tokena na serwerze:', error);
             if (error && typeof error === 'object' && 'response' in error) {
-                const axiosError = error as { response?: { status?: number } };
+                const axiosError = error as { response?: { status?: number; data?: unknown } };
+                console.error('[PUSH] Status błędu:', axiosError.response?.status);
+                console.error('[PUSH] Dane błędu:', axiosError.response?.data);
                 if (axiosError.response?.status === 401) {
                     console.error('[PUSH] Błąd uwierzytelniania - token JWT może być nieprawidłowy');
+                    toast.error('Błąd uwierzytelniania - zaloguj się ponownie');
+                } else {
+                    toast.error('Nie udało się zarejestrować urządzenia dla powiadomień');
                 }
+            } else {
+                toast.error('Nie udało się zarejestrować urządzenia dla powiadomień');
             }
-            toast.error('Nie udało się zarejestrować urządzenia dla powiadomień');
         }
     };
 
@@ -63,9 +73,9 @@ export const initializePushNotifications = (): void => {
     PushNotifications.addListener('registration', (token: Token) => {
         console.log('[PUSH] Rejestracja w usłudze push (FCM/APNS) pomyślna');
         console.log('[PUSH] Otrzymany token:', token.value.substring(0, 20) + '...');
+        console.log('[PUSH] Pełny token FCM:', token.value);
         // 3. Wyślij token na swój backend
         registerTokenOnServer(token.value);
-        toast.success('Urządzenie zostało zarejestrowane dla powiadomień');
     });
 
     // Listener: błąd rejestracji
