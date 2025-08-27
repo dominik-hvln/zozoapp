@@ -2,28 +2,40 @@ import { Injectable, InternalServerErrorException, NotFoundException, BadRequest
 import { PrismaService } from 'src/prisma/prisma.service';
 import Stripe from 'stripe';
 import { Prisma } from '@prisma/client';
+import { MailService } from 'src/mail/mail.service';
 
+// --- NOWA DEFINICJA DTO DLA ADRESU ---
+class ShippingAddressDto {
+    firstName: string;
+    lastName: string;
+    street: string;
+    city: string;
+    postalCode: string;
+    phoneNumber?: string;
+}
+
+// --- ZAKTUALIZOWANE DTO DLA PŁATNOŚCI ---
 class CreateCheckoutDto {
     items: { priceId: string, quantity: number }[];
     platform: 'web' | 'mobile';
     couponCode?: string;
     shippingMethodId: string;
+    shippingAddress: ShippingAddressDto; // <-- DODANE POLE
 }
 
 @Injectable()
 export class StoreService {
     private stripe: Stripe;
 
-    constructor(private prisma: PrismaService) {
+    constructor(private prisma: PrismaService, private mailService: MailService) {
         const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
         if (!stripeSecretKey) {
             throw new InternalServerErrorException('Stripe secret key is not configured.');
         }
         this.stripe = new Stripe(stripeSecretKey, {
-            apiVersion: '2025-07-30.basil',
+            apiVersion: '2025-07-30.basil', // Używam stabilnej wersji API
         });
     }
-
     async getAvailableProducts(
         searchTerm?: string,
         sortBy: 'price' | 'name' = 'name',
@@ -41,6 +53,9 @@ export class StoreService {
             where,
             include: {
                 product_variants: {
+                    where: {
+                        is_deleted: false,
+                    },
                     orderBy: { quantity: 'asc' },
                 },
             },
@@ -119,47 +134,56 @@ export class StoreService {
         });
     }
 
-    async createOneTimePaymentCheckoutSession(userId: string, checkoutDto: CreateCheckoutDto) {
-        const { items, platform, couponCode, shippingMethodId } = checkoutDto;
 
+    async createOneTimePaymentCheckoutSession(userId: string, checkoutDto: CreateCheckoutDto) {
+        const { items, platform, couponCode, shippingMethodId, shippingAddress } = checkoutDto;
+
+        // Krok 1: Walidacja i przygotowanie danych (bez zmian)
         const user = await this.prisma.users.findUnique({ where: { id: userId } });
-        if (!user) {
-            throw new NotFoundException('Użytkownik nie został znaleziony.');
+        if (!user || !user.stripe_customer_id) {
+            throw new NotFoundException('Użytkownik lub jego dane płatności nie zostały znalezione.');
         }
 
-        // --- Sprawdzenie metody dostawy (Twoja logika jest tutaj poprawna) ---
         const shippingMethod = await this.prisma.shipping_methods.findUnique({
-            where: {
-                id: shippingMethodId,
-                is_active: true,
-            }
+            where: { id: shippingMethodId, is_active: true }
         });
-
-        if (!shippingMethod || !shippingMethod.stripe_shipping_rate_id) {
+        if (!shippingMethod) {
             throw new BadRequestException('Wybrana metoda dostawy jest nieprawidłowa.');
         }
 
         const priceIds = items.map(item => item.priceId);
         const variantsInDb = await this.prisma.product_variants.findMany({
             where: { stripe_price_id: { in: priceIds } },
+            select: { id: true, stripe_price_id: true, price: true }
         });
 
-        if (variantsInDb.length !== items.length) {
-            throw new InternalServerErrorException('Niektóre produkty w koszyku są nieprawidłowe.');
-        }
-
-        const line_items = variantsInDb.map(variant => {
+        // Krok 2: Obliczenie finalnej kwoty zamówienia
+        const subtotal = variantsInDb.reduce((acc, variant) => {
             const item = items.find(i => i.priceId === variant.stripe_price_id);
-            return {
-                price: variant.stripe_price_id,
-                quantity: item?.quantity || 1,
-            };
-        });
+            return acc + (variant.price * (item?.quantity || 1));
+        }, 0);
 
+        let discountAmount = 0;
+        let promotionCodeId: string | null = null;
+        if (couponCode) {
+            const promotionCodes = await this.stripe.promotionCodes.list({ code: couponCode, active: true, limit: 1 });
+            if (promotionCodes.data.length > 0) {
+                promotionCodeId = promotionCodes.data[0].id;
+                const coupon = await this.stripe.coupons.retrieve(promotionCodes.data[0].coupon.id);
+                if (coupon.percent_off) {
+                    discountAmount = (subtotal * coupon.percent_off) / 100;
+                } else if (coupon.amount_off) {
+                    discountAmount = coupon.amount_off;
+                }
+            }
+        }
+        const totalAmount = subtotal - discountAmount + shippingMethod.price;
+
+        // Krok 3: Utworzenie sesji płatności w Stripe
+        const line_items = items.map(item => ({ price: item.priceId, quantity: item.quantity }));
         const successUrl = platform === 'mobile'
             ? `zozoapp://payment-complete?status=success&session_id={CHECKOUT_SESSION_ID}`
             : `${process.env.FRONTEND_URL}/panel/zamowienie/{CHECKOUT_SESSION_ID}`;
-
         const cancelUrl = platform === 'mobile'
             ? `zozoapp://payment-complete?status=cancel`
             : `${process.env.FRONTEND_URL}/panel/koszyk?status=cancel`;
@@ -169,33 +193,111 @@ export class StoreService {
             mode: 'payment',
             client_reference_id: userId,
             customer_email: user.email,
-            line_items: line_items,
-            shipping_options: [{ shipping_rate: shippingMethod.stripe_shipping_rate_id }],
+            line_items,
+            shipping_options: [{ shipping_rate: shippingMethod.stripe_shipping_rate_id ?? undefined }],
             success_url: successUrl,
             cancel_url: cancelUrl,
         };
+        if (promotionCodeId) {
+            sessionPayload.discounts = [{ promotion_code: promotionCodeId }];
+        }
+        const session = await this.stripe.checkout.sessions.create(sessionPayload);
 
-        if (couponCode) {
-            try {
-                const promotionCodes = await this.stripe.promotionCodes.list({
-                    code: couponCode,
-                    active: true,
-                    limit: 1,
-                });
-                if (promotionCodes.data.length > 0) {
-                    sessionPayload.discounts = [{ promotion_code: promotionCodes.data[0].id }];
-                } else {
-                    // Rzucamy błąd, jeśli kod jest nieaktywny
-                    throw new Error();
-                }
-            } catch (error) {
-                throw new BadRequestException('Kod rabatowy jest nieprawidłowy lub wygasł.');
+        const newAddress = await this.prisma.shipping_addresses.create({
+            data: {
+                first_name: shippingAddress.firstName,
+                last_name: shippingAddress.lastName,
+                street: shippingAddress.street,
+                city: shippingAddress.city,
+                postal_code: shippingAddress.postalCode,
+                phone_number: shippingAddress.phoneNumber,
             }
+        });
+
+        const newOrder = await this.prisma.orders.create({
+            data: {
+                user_id: userId,
+                shipping_address_id: newAddress.id,
+                shipping_method_id: shippingMethodId, // Zapisujemy ID metody dostawy
+                status: 'PENDING',
+                total: totalAmount,
+                stripe_customer_id: user.stripe_customer_id,
+                stripe_checkout_id: session.id,
+                stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+                total_amount: totalAmount,
+            }
+        });
+
+        const orderItemsData = items.map(item => {
+            const variant = variantsInDb.find(v => v.stripe_price_id === item.priceId);
+            if (!variant) {
+                throw new InternalServerErrorException(`Wariant produktu dla priceId ${item.priceId} nie został znaleziony.`);
+            }
+            return {
+                order_id: newOrder.id,
+                product_variant_id: variant.id,
+                quantity: item.quantity,
+                price: variant.price,
+            };
+        });
+
+        await this.prisma.order_items.createMany({
+            data: orderItemsData,
+        });
+
+        return { url: session.url };
+    }
+
+    async getAndUpdateOrderBySessionId(sessionId: string, userId: string) {
+        const order = await this.prisma.orders.findFirst({
+            where: {
+                stripe_checkout_id: sessionId,
+                user_id: userId,
+            },
+            include: {
+                users: true,
+                order_items: {
+                    include: {
+                        product_variants: { include: { products: true } },
+                    },
+                },
+            },
+        });
+
+        if (!order) {
+            throw new NotFoundException('Nie znaleziono zamówienia dla podanej sesji.');
         }
 
-        const session = await this.stripe.checkout.sessions.create(sessionPayload);
-        // Zwracamy tylko URL, tak jak wcześniej
-        return { url: session.url };
+        if (order.status === 'COMPLETED') {
+            return order;
+        }
+
+        const session = await this.stripe.checkout.sessions.retrieve(sessionId);
+
+        if (session.payment_status === 'paid') {
+            const updatedOrderData = await this.prisma.orders.update({
+                where: { id: order.id },
+                data: {
+                    status: 'COMPLETED',
+                    total: session.amount_total ?? order.total,
+                    total_amount: session.amount_total ?? order.total_amount,
+                    stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+                }
+            });
+
+            const finalOrder = {
+                ...order, // Zawiera `order_items` i `users` z pierwszego zapytania
+                ...updatedOrderData, // Nadpisuje `status`, `total` etc. nowymi danymi
+            };
+
+            if (finalOrder.users?.email) {
+                await this.mailService.sendOrderConfirmationEmail(finalOrder.users.email, finalOrder);
+            }
+
+            return finalOrder;
+        }
+
+        return order;
     }
 
     async createCustomerPortalSession(userId: string) {
@@ -210,5 +312,43 @@ export class StoreService {
             return_url: `${process.env.FRONTEND_URL}/panel/ustawienia/subskrypcja`,
         });
         return portalSession;
+    }
+
+    async getOrders() {
+        // Używamy rozbudowanego zapytania SQL, aby dołączyć listę produktów do każdego zamówienia.
+        const orders = await this.prisma.$queryRaw`
+            SELECT
+                o.id,
+                o.status,
+                o.total,
+                o.created_at,
+                u.email as "userEmail",
+                sa.first_name as "firstName",
+                sa.last_name as "lastName",
+                sa.street,
+                sa.city,
+                sa.postal_code as "postalCode",
+                sa.phone_number as "phoneNumber",
+                sm.name as "shippingMethodName",
+                sm.price as "shippingMethodPrice",
+                (
+                    SELECT json_agg(json_build_object(
+                            'quantity', oi.quantity,
+                            'price', oi.price,
+                            'name', p.name
+                                    ))
+                    FROM "order_items" oi
+                             JOIN "product_variants" pv ON oi.product_variant_id = pv.id
+                             JOIN "products" p ON pv.product_id = p.id
+                    WHERE oi.order_id = o.id
+                ) as "orderItems"
+            FROM "orders" o
+                     JOIN "users" u ON o.user_id = u.id
+                     LEFT JOIN "shipping_addresses" sa ON o.shipping_address_id = sa.id
+                     LEFT JOIN "shipping_methods" sm ON o.shipping_method_id = sm.id
+            GROUP BY o.id, u.email, sa.id, sm.id
+            ORDER BY o.created_at DESC;
+        `;
+        return orders;
     }
 }

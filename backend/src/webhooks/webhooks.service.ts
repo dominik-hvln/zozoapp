@@ -19,7 +19,6 @@ export class WebhooksService {
         this.stripe = new Stripe(stripeSecretKey, { apiVersion: '2025-07-30.basil' });
     }
 
-    // GŁÓWNA FUNKCJA, KTÓRA WRACA NA SWOJE MIEJSCE
     async handleSuccessfulCheckout(session: Stripe.Checkout.Session) {
         if (session.mode === 'subscription') {
             await this.handleSubscriptionUpdate(session);
@@ -77,11 +76,10 @@ export class WebhooksService {
 
         if (existingOrder) {
             console.log(`[WEBHOOK] Zamówienie dla sesji ${session.id} już zostało przetworzone. Pomijam.`);
-            return; // Zakończ, jeśli zamówienie już istnieje
+            return;
         }
 
         try {
-            // Krok 2: Stwórz zamówienie w bazie
             const order = await this.prisma.orders.create({
                 data: {
                     user_id: userId,
@@ -91,7 +89,6 @@ export class WebhooksService {
             });
             console.log(`[WEBHOOK] Stworzono zamówienie w bazie: ${order.id}`);
 
-            // Krok 3: Pobierz szczegóły produktów i stwórz pozycje zamówienia
             const lineItems = await this.stripe.checkout.sessions.listLineItems(session.id);
             for (const item of lineItems.data) {
                 if (item.price && item.price.id && item.quantity) {

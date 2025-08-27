@@ -65,17 +65,4 @@ export class OrdersService {
             include: { order_items: { include: { product_variants: { include: { products: true } } } } }
         });
     }
-
-    async getOrderBySessionId(sessionId: string, userId: string) {
-        const order = await this.prisma.orders.findFirst({
-            where: {
-                stripe_checkout_id: sessionId,
-                user_id: userId,
-            },
-        });
-        if (!order) {
-            throw new NotFoundException('Nie znaleziono zamówienia dla podanej sesji.');
-        }
-        return order;
-    }
 }

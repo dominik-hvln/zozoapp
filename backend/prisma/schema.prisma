@@ -93,6 +93,7 @@ model products {
   stripe_product_id String?
   created_at        DateTime           @default(now()) @db.Timestamptz(6)
   image_url         String?
+  is_deleted        Boolean            @default(false)
   cart_items        cart_items[]
   product_variants  product_variants[]
   categories        categories[]       @relation("CategoryToProduct")
@@ -124,6 +125,7 @@ model product_variants {
   price           Int
   stripe_price_id String        @unique
   created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  is_deleted      Boolean       @default(false)
   order_items     order_items[]
   products        products      @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
@@ -146,13 +148,21 @@ model order_items {
 }
 
 model orders {
-  id                 String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  user_id            String        @db.Uuid
-  stripe_checkout_id String        @unique
-  total_amount       Int
-  created_at         DateTime      @default(now()) @db.Timestamptz(6)
-  order_items        order_items[]
-  users              users         @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  id                       String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id                  String              @db.Uuid
+  stripe_checkout_id       String              @unique
+  total_amount             Int
+  created_at               DateTime            @default(now()) @db.Timestamptz(6)
+  shipping_address_id      String?             @unique @db.Uuid
+  status                   String              @default("PENDING")
+  total                    Int                 @default(0)
+  stripe_payment_intent_id String?
+  stripe_customer_id       String?
+  shipping_method_id       String?             @db.Uuid
+  order_items              order_items[]
+  shipping_addresses       shipping_addresses? @relation(fields: [shipping_address_id], references: [id])
+  shipping_methods         shipping_methods?   @relation(fields: [shipping_method_id], references: [id])
+  users                    users               @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 }
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
@@ -193,6 +203,19 @@ model shipping_methods {
   is_active               Boolean  @default(true)
   stripe_shipping_rate_id String?
   created_at              DateTime @default(now()) @db.Timestamptz(6)
+  orders                  orders[]
+}
+
+model shipping_addresses {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  first_name   String
+  last_name    String
+  street       String
+  city         String
+  postal_code  String
+  phone_number String?
+  created_at   DateTime @default(now()) @db.Timestamptz(3)
+  orders       orders?
 }
 
 enum discount_type {

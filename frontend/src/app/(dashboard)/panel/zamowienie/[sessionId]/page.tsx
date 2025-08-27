@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PartyPopper } from 'lucide-react';
 
 // Zmieniamy funkcję: teraz pobiera dane, a nie tworzy
-const getOrderBySessionId = async (sessionId: string) => (await api.get(`/orders/by-session/${sessionId}`)).data;
+const getOrderBySessionId = async (sessionId: string) => (await api.get(`/store/orders/by-session/${sessionId}`)).data;
 
 export default function OrderSummaryPage() {
     const params = useParams();

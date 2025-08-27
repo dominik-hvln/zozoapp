@@ -140,8 +140,18 @@ export class AdminService {
 
     getAllProducts() {
         return this.prisma.products.findMany({
+            where: {
+                is_deleted: false,
+            },
             orderBy: { created_at: 'desc' },
-            include: { product_variants: true, categories: true },
+            include: { product_variants: {
+                    where: {
+                        is_deleted: false,
+                    },
+                    orderBy: {
+                        quantity: 'asc'
+                    },
+                }, categories: true },
         });
     }
 
@@ -163,13 +173,16 @@ export class AdminService {
         });
     }
 
-    async updateProduct(productId: string, data: { name?: string, description?: string, isActive?: boolean }) {
+    async updateProduct(productId: string, data: { name?: string, description?: string, isActive?: boolean, categoryIds?: string[] }) {
         return this.prisma.products.update({
             where: { id: productId },
             data: {
                 name: data.name,
                 description: data.description,
                 is_active: data.isActive,
+                categories: {
+                    set: data.categoryIds?.map(id => ({ id })) || [],
+                },
             },
         });
     }
@@ -229,6 +242,50 @@ export class AdminService {
                 price: data.price,
                 stripe_price_id: newStripePrice.id,
             }
+        });
+    }
+
+    async deleteVariant(variantId: string) {
+        const variant = await this.prisma.product_variants.findUnique({
+            where: { id: variantId }
+        });
+
+        if (!variant) {
+            throw new NotFoundException('Wariant nie został znaleziony.');
+        }
+
+        try {
+            await this.stripe.prices.update(variant.stripe_price_id, { active: false });
+
+            await this.prisma.product_variants.update({
+                where: { id: variantId },
+                data: {
+                    is_deleted: true,
+                }
+            });
+
+            return { success: true, message: 'Wariant został pomyślnie zarchiwizowany.' };
+        } catch (error) {
+            console.error("Błąd podczas archiwizacji wariantu:", error);
+            throw new InternalServerErrorException('Nie udało się zarchiwizować wariantu.');
+        }
+    }
+
+    async deleteProduct(productId: string) {
+        const product = await this.prisma.products.findUnique({ where: { id: productId } });
+        if (!product) {
+            throw new NotFoundException('Produkt nie został znaleziony.');
+        }
+
+        // Deaktywujemy produkt w Stripe
+        if (product.stripe_product_id) {
+            await this.stripe.products.update(product.stripe_product_id, { active: false });
+        }
+
+        // Archiwizujemy produkt w naszej bazie
+        return this.prisma.products.update({
+            where: { id: productId },
+            data: { is_deleted: true },
         });
     }
 
@@ -332,12 +389,10 @@ export class AdminService {
             throw new NotFoundException('Metoda dostawy nie została znaleziona.');
         }
 
-        // Krok 1: Zdezaktywuj starą stawkę w Stripe (Stripe nie pozwala na edycję ceny)
         if (existingMethod.stripe_shipping_rate_id) {
             await this.stripe.shippingRates.update(existingMethod.stripe_shipping_rate_id, { active: false });
         }
 
-        // Krok 2: Stwórz nową stawkę w Stripe
         const newShippingRate = await this.stripe.shippingRates.create({
             display_name: data.name as string,
             type: 'fixed_amount',
@@ -347,7 +402,6 @@ export class AdminService {
             },
         });
 
-        // Krok 3: Zaktualizuj metodę dostawy w naszej bazie
         return this.prisma.shipping_methods.update({
             where: { id },
             data: {

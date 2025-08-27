@@ -1,7 +1,7 @@
 'use client';
 
 import { useCartStore } from '@/store/cart.store';
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
 import { StaticImageData } from 'next/image';
@@ -14,7 +14,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Trash2 } from 'lucide-react';
@@ -24,13 +23,23 @@ import LemonIcon from '@/assets/avatars/lemon.svg';
 // Import komponentu do wyboru dostawy
 import { ShippingSelector } from '@/components/cart/ShippingSelector';
 
-// --- PRZYWRÓCONA, ORYGINALNA DEFINICJA TYPU Z TWOJEGO KODU ---
+// Definicja typu dla zniżki
 interface AppliedDiscount {
     code: string;
     discount: {
         type: 'PERCENTAGE' | 'FIXED_AMOUNT';
         value: number;
     }
+}
+
+// --- NOWY TYP DLA ADRESU DOSTAWY ---
+interface ShippingAddress {
+    firstName: string;
+    lastName: string;
+    street: string;
+    city: string;
+    postalCode: string;
+    phoneNumber: string;
 }
 
 // Mapowanie ikon produktów
@@ -43,20 +52,30 @@ export default function KoszykPage() {
     const { items, removeItem, updateItemQuantity, clearCart } = useCartStore();
     const [promoCode, setPromoCode] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
-
-    // Przechowuje ID i cenę wybranej metody dostawy
     const [selectedShipping, setSelectedShipping] = useState<{ id: string; price: number } | null>(null);
 
-    // Obliczenie sumy częściowej za produkty
-    const subtotal = useMemo(
-        () => items.reduce((acc, item) => acc + (item.price * item.quantity), 0),
-        [items]
-    );
+    // --- NOWY STAN DLA FORMULARZA ADRESOWEGO ---
+    const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
+        firstName: '',
+        lastName: '',
+        street: '',
+        city: '',
+        postalCode: '',
+        phoneNumber: '',
+    });
 
-    // Koszt dostawy na podstawie wybranej opcji, domyślnie 0
+    // Handler do aktualizacji stanu adresu
+    const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const { name, value } = e.target;
+        setShippingAddress(prevState => ({
+            ...prevState,
+            [name]: value,
+        }));
+    };
+
+    // Obliczenia sum, zniżek i kosztów
+    const subtotal = useMemo(() => items.reduce((acc, item) => acc + (item.price * item.quantity), 0), [items]);
     const shippingCost = selectedShipping?.price ?? 0;
-
-    // --- PRZYWRÓCONA, ORYGINALNA LOGIKA OBLICZANIA RABATU Z TWOJEGO KODU ---
     const discountAmount = useMemo(() => {
         if (!appliedDiscount) return 0;
         if (appliedDiscount.discount.type === 'PERCENTAGE') {
@@ -65,13 +84,16 @@ export default function KoszykPage() {
             return appliedDiscount.discount.value;
         }
     }, [appliedDiscount, subtotal]);
-
-    // Obliczenie sumy całkowitej
     const total = subtotal + shippingCost - discountAmount;
 
     // Mutacja do tworzenia sesji płatności
     const checkoutMutation = useMutation({
-        mutationFn: (data: { items: { priceId: string, quantity: number }[], couponCode?: string, shippingMethodId: string }) => {
+        mutationFn: (data: {
+            items: { priceId: string, quantity: number }[],
+            couponCode?: string,
+            shippingMethodId: string,
+            shippingAddress: ShippingAddress // <-- Dodany adres
+        }) => {
             const platform = Capacitor.isNativePlatform() ? 'mobile' : 'web';
             return api.post('/store/checkout/payment', { ...data, platform });
         },
@@ -90,16 +112,15 @@ export default function KoszykPage() {
         },
     });
 
-    // --- PRZYWRÓCONA, ORYGINALNA MUTACJA DLA KODU RABATOWEGO Z TWOJEGO KODU ---
+    // Mutacja dla kodu promocyjnego
     const promoMutation = useMutation({
         mutationFn: (code: string) => api.post('/store/validate-promo', { code }),
         onSuccess: (response) => {
             setAppliedDiscount(response.data);
             toast.success(`Kod rabatowy "${response.data.code}" został pomyślnie zastosowany!`);
         },
-        onError: (error: AxiosError) => {
-            const errorMessage = (error.response?.data as { message: string })?.message || 'Wystąpił błąd.';
-            toast.error('Błąd kodu rabatowego', { description: errorMessage });
+        onError: (error: AxiosError<{ message: string }>) => {
+            toast.error('Błąd kodu rabatowego', { description: error.response?.data?.message || 'Wystąpił błąd.' });
         }
     });
 
@@ -108,11 +129,19 @@ export default function KoszykPage() {
         promoMutation.mutate(promoCode);
     };
 
-    // Obsługa przejścia do płatności
+    // --- ZAKTUALIZOWANA FUNKCJA CHECKOUT ---
     const handleCheckout = () => {
+        // Walidacja wyboru dostawy
         if (!selectedShipping) {
             toast.error('Proszę wybrać metodę dostawy.');
             return;
+        }
+        // Prosta walidacja pól adresowych
+        for (const [key, value] of Object.entries(shippingAddress)) {
+            if (!value && key !== 'phoneNumber') { // numer telefonu jest opcjonalny
+                toast.error('Proszę wypełnić wszystkie pola adresowe.');
+                return;
+            }
         }
 
         const itemsToCheckout = items.map(item => ({
@@ -124,6 +153,7 @@ export default function KoszykPage() {
             items: itemsToCheckout,
             couponCode: appliedDiscount?.code,
             shippingMethodId: selectedShipping.id,
+            shippingAddress: shippingAddress, // <-- Przekazanie danych adresowych
         });
     };
 
@@ -131,15 +161,13 @@ export default function KoszykPage() {
         <div className="container mx-auto p-4 md:p-6 lg:p-8">
             <h1 className="text-3xl font-bold mb-6">Twój koszyk</h1>
             {items.length === 0 ? (
-                <Card className="text-center p-8">
-                    <CardContent>
-                        <p className="text-lg text-gray-500">Twój koszyk jest pusty.</p>
-                    </CardContent>
-                </Card>
+                <Card className="text-center p-8"><CardContent><p>Twój koszyk jest pusty.</p></CardContent></Card>
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2">
+                    <div className="lg:col-span-2 space-y-8">
+                        {/* Tabela z produktami */}
                         <Card>
+                            <CardHeader><CardTitle>Produkty w koszyku</CardTitle></CardHeader>
                             <CardContent className="p-0">
                                 <Table>
                                     <TableHeader>
@@ -154,22 +182,12 @@ export default function KoszykPage() {
                                     <TableBody>
                                         {items.map((item) => (
                                             <TableRow key={item.id}>
-                                                <TableCell>
-                                                    <Image src={productIcons[item.name] || LemonIcon} alt={item.name} width={64} height={64} className="rounded-md" />
-                                                </TableCell>
-                                                <TableCell className="font-medium">{item.name}</TableCell>
+                                                <TableCell><Image src={productIcons[item.name] || LemonIcon} alt={item.name} width={64} height={64} /></TableCell>
+                                                <TableCell>{item.name}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
-                                                        <Input
-                                                            type="number"
-                                                            min="1"
-                                                            value={item.quantity}
-                                                            onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value, 10))}
-                                                            className="w-20"
-                                                        />
-                                                        <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)}>
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
+                                                        <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value, 10))} className="w-20" />
+                                                        <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
                                                 </TableCell>
                                                 <TableCell>{(item.price / 100).toFixed(2)} zł</TableCell>
@@ -180,56 +198,41 @@ export default function KoszykPage() {
                                 </Table>
                             </CardContent>
                         </Card>
+
+                        {/* --- NOWY FORMULARZ ADRESOWY --- */}
+                        <Card>
+                            <CardHeader><CardTitle>Adres Dostawy</CardTitle></CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div><Label htmlFor="firstName">Imię</Label><Input id="firstName" name="firstName" value={shippingAddress.firstName} onChange={handleAddressChange} required /></div>
+                                    <div><Label htmlFor="lastName">Nazwisko</Label><Input id="lastName" name="lastName" value={shippingAddress.lastName} onChange={handleAddressChange} required /></div>
+                                </div>
+                                <div><Label htmlFor="street">Ulica i numer</Label><Input id="street" name="street" value={shippingAddress.street} onChange={handleAddressChange} required /></div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div><Label htmlFor="postalCode">Kod pocztowy</Label><Input id="postalCode" name="postalCode" value={shippingAddress.postalCode} onChange={handleAddressChange} required /></div>
+                                    <div><Label htmlFor="city">Miasto</Label><Input id="city" name="city" value={shippingAddress.city} onChange={handleAddressChange} required /></div>
+                                </div>
+                                <div><Label htmlFor="phoneNumber">Numer telefonu (opcjonalnie)</Label><Input id="phoneNumber" name="phoneNumber" type="tel" value={shippingAddress.phoneNumber} onChange={handleAddressChange} /></div>
+                            </CardContent>
+                        </Card>
                     </div>
 
+                    {/* Podsumowanie zamówienia */}
                     <div className="lg:col-span-1">
                         <Card className="sticky top-24 shadow-lg">
-                            <CardHeader>
-                                <CardTitle>Podsumowanie zamówienia</CardTitle>
-                            </CardHeader>
+                            <CardHeader><CardTitle>Podsumowanie</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
-                                <div className="flex justify-between">
-                                    <span>Suma produktów:</span>
-                                    <span>{(subtotal / 100).toFixed(2)} zł</span>
-                                </div>
-
+                                <div className="flex justify-between"><span>Suma produktów:</span><span>{(subtotal / 100).toFixed(2)} zł</span></div>
                                 <div className="flex items-end gap-2">
-                                    <div className="flex-grow">
-                                        <Label htmlFor="promo">Kod promocyjny</Label>
-                                        <Input id="promo" placeholder="Wpisz kod" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} />
-                                    </div>
-                                    <Button onClick={handleApplyPromoCode} disabled={promoMutation.isPending}>
-                                        {promoMutation.isPending ? 'Sprawdzam...' : 'Zastosuj'}
-                                    </Button>
+                                    <div className="flex-grow"><Label htmlFor="promo">Kod promocyjny</Label><Input id="promo" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} /></div>
+                                    <Button onClick={handleApplyPromoCode} disabled={promoMutation.isPending}>{promoMutation.isPending ? '...' : 'Zastosuj'}</Button>
                                 </div>
-
-                                {/* DOSTOSOWANE WYŚWIETLANIE NAZWY RABATU */}
-                                {appliedDiscount && (
-                                    <div className="flex justify-between text-green-600">
-                                        <span>Zastosowano rabat ({appliedDiscount.code}):</span>
-                                        <span>-{(discountAmount / 100).toFixed(2)} zł</span>
-                                    </div>
-                                )}
-
-                                <ShippingSelector
-                                    selectedId={selectedShipping?.id ?? null}
-                                    onChange={(id, price) => setSelectedShipping({ id, price })}
-                                />
-
+                                {appliedDiscount && (<div className="flex justify-between text-green-600"><span>Rabat ({appliedDiscount.code}):</span><span>-{(discountAmount / 100).toFixed(2)} zł</span></div>)}
+                                <ShippingSelector selectedId={selectedShipping?.id ?? null} onChange={(id, price) => setSelectedShipping({ id, price })} />
                                 <Separator />
-
-                                <div className="flex justify-between font-bold text-xl">
-                                    <span>Razem do zapłaty:</span>
-                                    <span>{(total / 100).toFixed(2)} zł</span>
-                                </div>
-
-                                <Button
-                                    onClick={handleCheckout}
-                                    disabled={items.length === 0 || checkoutMutation.isPending}
-                                    className="w-full mt-4"
-                                    size="lg"
-                                >
-                                    {checkoutMutation.isPending ? 'Przetwarzanie...' : 'Przejdź do płatności'}
+                                <div className="flex justify-between font-bold text-xl"><span>Razem:</span><span>{(total / 100).toFixed(2)} zł</span></div>
+                                <Button onClick={handleCheckout} disabled={items.length === 0 || checkoutMutation.isPending} className="w-full mt-4" size="lg">
+                                    {checkoutMutation.isPending ? 'Przetwarzanie...' : 'Kupuję i płacę'}
                                 </Button>
                             </CardContent>
                         </Card>

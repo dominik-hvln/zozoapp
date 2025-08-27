@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseGuards, Param, Res, Put } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Param, Res, Put, Delete } from '@nestjs/common';
 import { AdminGuard } from 'src/auth/guards/admin.guard';
 import { AdminService } from './admin.service';
 import { Response } from 'express';
@@ -61,8 +61,16 @@ export class AdminController {
     }
 
     @Put('products/:id')
-    updateProduct(@Param('id') productId: string, @Body() body: { name?: string, description?: string, isActive?: boolean }) {
-        return this.adminService.updateProduct(productId, body);
+    updateProduct(
+        @Param('id') productId: string,
+        @Body() data: { name: string; description: string; isActive: boolean; categoryIds: string[] }
+    ) {
+        return this.adminService.updateProduct(productId, data);
+    }
+
+    @Delete('products/:id')
+    deleteProduct(@Param('id') productId: string) {
+        return this.adminService.deleteProduct(productId);
     }
 
     @Post('products/:id/variants')
@@ -73,6 +81,11 @@ export class AdminController {
     @Put('products/variants/:variantId')
     updateVariant(@Param('variantId') variantId: string, @Body() body: { quantity: number; price: number; }) {
         return this.adminService.updateVariant(variantId, body);
+    }
+
+    @Delete('products/variants/:variantId')
+    deleteVariant(@Param('variantId') variantId: string) {
+        return this.adminService.deleteVariant(variantId);
     }
 
     @Get('categories')

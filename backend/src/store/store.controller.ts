@@ -1,12 +1,22 @@
-import { Controller, Get, Post, Request, UseGuards, Body, Query, Req } from '@nestjs/common';
+import { Controller, Get, Post, Request, UseGuards, Body, Query, Req, Param } from '@nestjs/common';
 import { StoreService } from './store.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+
+class ShippingAddressDto {
+    firstName: string;
+    lastName: string;
+    street: string;
+    city: string;
+    postalCode: string;
+    phoneNumber?: string;
+}
 
 class CreateCheckoutDto {
     items: { priceId: string, quantity: number }[];
     platform: 'web' | 'mobile';
     couponCode?: string;
     shippingMethodId: string;
+    shippingAddress: ShippingAddressDto; // <-- DODANE POLE
 }
 
 @Controller('store')
@@ -33,7 +43,6 @@ export class StoreController {
     @Post('checkout/payment')
     createCheckoutSession(@Req() req: Request, @Body() checkoutDto: CreateCheckoutDto) {
         const userId = (req as any).user.userId;
-
         return this.storeService.createOneTimePaymentCheckoutSession(userId, checkoutDto);
     }
 
@@ -53,5 +62,18 @@ export class StoreController {
     @Get('shipping')
     getShipping() {
         return this.storeService.getActiveShippingMethods();
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('admin/orders')
+    getOrders() {
+        return this.storeService.getOrders();
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('orders/by-session/:sessionId')
+    getOrderBySessionId(@Param('sessionId') sessionId: string, @Req() req: Request) {
+        const userId = (req as any).user.userId;
+        return this.storeService.getAndUpdateOrderBySessionId(sessionId, userId);
     }
 }

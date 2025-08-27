@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import Image from 'next/image';
 
@@ -13,13 +13,14 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { PlusCircle, Edit, Upload, Check, ChevronsUpDown } from 'lucide-react';
+import { PlusCircle, Edit, Upload, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 // --- TYPY I FUNKCJE API ---
 interface Variant { id: string; quantity: number; price: number; stripe_price_id: string; }
@@ -36,7 +37,8 @@ interface Product {
 
 const getProducts = async (): Promise<Product[]> => (await api.get('/admin/products')).data;
 const createProduct = async (data: { name: string, description?: string, categoryIds: string[] }) => (await api.post('/admin/products', data)).data;
-const updateProduct = async (data: { id: string; name: string; description: string; isActive: boolean }) => (await api.put(`/admin/products/${data.id}`, data)).data;
+const updateProduct = async (data: { id: string; name: string; description: string; isActive: boolean; categoryIds: string[] }) => (await api.put(`/admin/products/${data.id}`, data)).data;
+const deleteProduct = async (productId: string) => (await api.delete(`/admin/products/${productId}`)).data;
 const uploadProductImage = async ({ productId, file }: { productId: string; file: File }) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -44,6 +46,7 @@ const uploadProductImage = async ({ productId, file }: { productId: string; file
 };
 const addVariant = async (data: { productId: string; quantity: number; price: number; }) => (await api.post(`/admin/products/${data.productId}/variants`, data)).data;
 const updateVariant = async (data: { variantId: string; quantity: number; price: number; }) => (await api.put(`/admin/products/variants/${data.variantId}`, data)).data;
+const deleteVariant = async (variantId: string) => (await api.delete(`/admin/products/variants/${variantId}`)).data;
 const getCategories = async (): Promise<Category[]> => (await api.get('/admin/categories')).data;
 const createCategory = async (name: string) => (await api.post('/admin/categories', { name })).data;
 
@@ -56,6 +59,7 @@ export default function AdminProductsPage() {
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
     const [productForm, setProductForm] = useState({ name: '', description: '', categoryIds: [] as string[] });
+    const [editProductForm, setEditProductForm] = useState({ name: '', description: '', isActive: true, categoryIds: [] as string[] });
     const [productImageFile, setProductImageFile] = useState<File | null>(null);
     const [variantForm, setVariantForm] = useState({ quantity: 0, price: 0.00 });
     const [newCategoryName, setNewCategoryName] = useState('');
@@ -66,118 +70,45 @@ export default function AdminProductsPage() {
     const { data: products, isLoading } = useQuery({ queryKey: ['admin-products'], queryFn: getProducts });
     const { data: categories } = useQuery({ queryKey: ['admin-categories'], queryFn: getCategories });
 
-    const imageMutation = useMutation({
-        mutationFn: uploadProductImage,
-        onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-            toast.success('Zdjęcie produktu zostało zaktualizowane!');
-            if (selectedProduct && selectedProduct.id === variables.productId) {
-                setSelectedProduct(prev => prev ? { ...prev, image_url: data.url } : null);
-            }
-        },
-        onError: () => toast.error('Błąd podczas wgrywania zdjęcia.')
-    });
+    // --- MUTACJE Z ROZBUDOWANĄ OBSŁUGĄ BŁĘDÓW ---
+    const imageMutation = useMutation({ mutationFn: uploadProductImage, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Zdjęcie zaktualizowane!'); }, onError: (error) => { console.error(error); toast.error('Błąd wgrywania zdjęcia.'); } });
+    const productMutation = useMutation({ mutationFn: createProduct, onSuccess: async (newProduct) => { if (productImageFile) { await imageMutation.mutateAsync({ productId: newProduct.id, file: productImageFile }); } queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Produkt dodany!'); setIsProductDialogOpen(false); setProductForm({ name: '', description: '', categoryIds: [] }); setProductImageFile(null); }, onError: (error) => { console.error(error); toast.error('Błąd dodawania produktu.'); } });
+    const productUpdateMutation = useMutation({ mutationFn: updateProduct, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Produkt zaktualizowany!'); setIsEditDialogOpen(false); }, onError: (error) => { console.error(error); toast.error('Błąd aktualizacji produktu.'); } });
+    const productDeleteMutation = useMutation({ mutationFn: deleteProduct, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Produkt został usunięty!'); setIsEditDialogOpen(false); }, onError: (error) => { console.error(error); toast.error('Błąd usuwania produktu.'); } });
+    const variantMutation = useMutation({ mutationFn: addVariant, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Wariant dodany!'); setIsVariantDialogOpen(false); }, onError: (error) => { console.error(error); toast.error('Błąd dodawania wariantu.'); } });
+    const variantUpdateMutation = useMutation({ mutationFn: updateVariant, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Wariant zaktualizowany!'); setEditingVariant(null); }, onError: (error) => { console.error(error); toast.error('Błąd aktualizacji wariantu.'); } });
+    const variantDeleteMutation = useMutation({ mutationFn: deleteVariant, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Wariant usunięty!'); setEditingVariant(null); }, onError: (error) => { console.error(error); toast.error('Błąd usuwania wariantu.'); } });
+    const categoryMutation = useMutation({ mutationFn: createCategory, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-categories'] }); toast.success('Kategoria dodana!'); setNewCategoryName(''); }, onError: (error) => { console.error(error); toast.error('Błąd dodawania kategorii.'); } });
 
-    const productMutation = useMutation({
-        mutationFn: createProduct,
-        onSuccess: async (newProduct) => {
-            if (productImageFile) {
-                await imageMutation.mutateAsync({ productId: newProduct.id, file: productImageFile });
-            }
-            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-            toast.success('Produkt został pomyślnie dodany!');
-            setIsProductDialogOpen(false);
-            setProductForm({ name: '', description: '', categoryIds: [] });
-            setProductImageFile(null);
-        },
-        onError: () => toast.error('Błąd podczas dodawania produktu.')
-    });
-
-    const productUpdateMutation = useMutation({
-        mutationFn: updateProduct,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-            toast.success('Produkt został zaktualizowany!');
-            setIsEditDialogOpen(false);
-        },
-        onError: () => toast.error('Błąd podczas aktualizacji produktu.')
-    });
-
-    const variantMutation = useMutation({
-        mutationFn: addVariant,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-            toast.success('Wariant został pomyślnie dodany!');
-            setIsVariantDialogOpen(false);
-            setVariantForm({ quantity: 0, price: 0.00 });
-        },
-        onError: () => toast.error('Błąd podczas dodawania wariantu.')
-    });
-
-    const variantUpdateMutation = useMutation({
-        mutationFn: updateVariant,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['admin-products'] });
-            toast.success('Wariant został zaktualizowany!');
-            setEditingVariant(null);
-        },
-        onError: () => toast.error('Błąd podczas aktualizacji wariantu.')
-    });
-
-    const categoryMutation = useMutation({
-        mutationFn: createCategory,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
-            toast.success('Kategoria została dodana!');
-            setNewCategoryName('');
-        },
-        onError: () => toast.error('Błąd podczas dodawania kategorii.')
-    });
-
+    // --- HANDLERY ---
     const handleProductSubmit = (e: React.FormEvent) => { e.preventDefault(); productMutation.mutate(productForm); };
-    const handleVariantSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedProduct) return;
-        variantMutation.mutate({
-            productId: selectedProduct.id,
-            ...variantForm,
-            price: Math.round(variantForm.price * 100),
-        });
-    };
+    const handleVariantSubmit = (e: React.FormEvent) => { e.preventDefault(); if (!selectedProduct) return; variantMutation.mutate({ productId: selectedProduct.id, ...variantForm, price: Math.round(variantForm.price * 100) }); };
     const handleCategorySubmit = (e: React.FormEvent) => { e.preventDefault(); categoryMutation.mutate(newCategoryName); };
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => { const file = e.target.files?.[0]; if (file && selectedProduct) { imageMutation.mutate({ productId: selectedProduct.id, file }); } };
+    const handleVariantUpdate = (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); if (!editingVariant) return; const formData = new FormData(e.currentTarget); variantUpdateMutation.mutate({ variantId: editingVariant.id, quantity: Number(formData.get('quantity')), price: Math.round(Number(formData.get('price')) * 100) }); };
+    const handleVariantDelete = () => { if (!editingVariant) return; variantDeleteMutation.mutate(editingVariant.id); };
+    const handleProductDelete = () => { if (!selectedProduct) return; productDeleteMutation.mutate(selectedProduct.id); };
 
     const handleEditClick = (product: Product) => {
         setSelectedProduct(product);
+        setEditProductForm({
+            name: product.name,
+            description: product.description || '',
+            isActive: product.is_active,
+            categoryIds: product.categories.map(c => c.id),
+        });
         setIsEditDialogOpen(true);
-    };
-
-    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file && selectedProduct) {
-            imageMutation.mutate({ productId: selectedProduct.id, file });
-        }
     };
 
     const handleProductUpdate = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!selectedProduct) return;
-        const formData = new FormData(e.currentTarget);
         productUpdateMutation.mutate({
             id: selectedProduct.id,
-            name: formData.get('name') as string,
-            description: formData.get('description') as string,
-            isActive: formData.get('isActive') === 'on',
-        });
-    };
-
-    const handleVariantUpdate = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-        if (!editingVariant) return;
-        const formData = new FormData(e.currentTarget);
-        variantUpdateMutation.mutate({
-            variantId: editingVariant.id,
-            quantity: Number(formData.get('quantity')),
-            price: Math.round(Number(formData.get('price')) * 100),
+            name: editProductForm.name,
+            description: editProductForm.description,
+            isActive: editProductForm.isActive,
+            categoryIds: editProductForm.categoryIds,
         });
     };
 
@@ -194,16 +125,24 @@ export default function AdminProductsPage() {
                             <TableHeader><TableRow>
                                 <TableHead className="w-[80px]">Zdjęcie</TableHead>
                                 <TableHead>Nazwa</TableHead>
+                                <TableHead>Kategorie</TableHead>
                                 <TableHead>Warianty</TableHead>
                                 <TableHead>Status</TableHead>
                                 <TableHead className="text-right">Akcje</TableHead>
                             </TableRow></TableHeader>
                             <TableBody>
-                                {isLoading && <TableRow><TableCell colSpan={5} className="text-center">Ładowanie...</TableCell></TableRow>}
+                                {isLoading && <TableRow><TableCell colSpan={6} className="text-center">Ładowanie...</TableCell></TableRow>}
                                 {products?.map((product) => (
                                     <TableRow key={product.id}>
                                         <TableCell><Image src={product.image_url || '/placeholder.svg'} alt={product.name} width={64} height={64} className="rounded-md object-cover bg-gray-100" /></TableCell>
                                         <TableCell className="font-medium">{product.name}</TableCell>
+                                        <TableCell>
+                                            <div className="flex flex-wrap gap-1">
+                                                {product.categories.map(cat => (
+                                                    <Badge key={cat.id} variant="outline">{cat.name}</Badge>
+                                                ))}
+                                            </div>
+                                        </TableCell>
                                         <TableCell><div className="flex flex-wrap gap-1">
                                             {product.product_variants.map(v => <Badge key={v.id} variant="secondary" className="cursor-pointer" onClick={() => setEditingVariant(v)}>{v.quantity} szt.</Badge>)}
                                         </div></TableCell>
@@ -241,32 +180,12 @@ export default function AdminProductsPage() {
                         <div><Label>Zdjęcie produktu (opcjonalnie)</Label><Input type="file" onChange={(e) => setProductImageFile(e.target.files?.[0] || null)} accept="image/png, image/jpeg, image/jpg" /></div>
                         <div><Label>Nazwa</Label><Input value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} /></div>
                         <div><Label>Opis</Label><Textarea value={productForm.description} onChange={e => setProductForm({...productForm, description: e.target.value})} /></div>
-                        <div>
-                            <Label>Kategorie</Label>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button variant="outline" role="combobox" className="w-full justify-between">
-                                        {productForm.categoryIds.length > 0 ? `${productForm.categoryIds.length} zaznaczono` : "Wybierz kategorie..."}
-                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-[300px] p-0">
-                                    <Command>
-                                        <CommandInput placeholder="Szukaj kategorii..." />
-                                        <CommandList><CommandEmpty>Brak kategorii.</CommandEmpty><CommandGroup>
-                                            {categories?.map(cat => (
-                                                <CommandItem key={cat.id} value={cat.name} onSelect={() => {
-                                                    const isSelected = productForm.categoryIds.includes(cat.id);
-                                                    setProductForm(prev => ({ ...prev, categoryIds: isSelected ? prev.categoryIds.filter(id => id !== cat.id) : [...prev.categoryIds, cat.id] }));
-                                                }}>
-                                                    <Check className={cn("mr-2 h-4 w-4", productForm.categoryIds.includes(cat.id) ? "opacity-100" : "opacity-0")} />
-                                                    {cat.name}
-                                                </CommandItem>
-                                            ))}
-                                        </CommandGroup></CommandList>
-                                    </Command>
-                                </PopoverContent>
-                            </Popover>
+                        <div><Label>Kategorie</Label>
+                            <CategorySelector
+                                allCategories={categories || []}
+                                selectedIds={productForm.categoryIds}
+                                onSelectionChange={(ids) => setProductForm(prev => ({ ...prev, categoryIds: ids }))}
+                            />
                         </div>
                         <Button type="submit" className="w-full" disabled={productMutation.isPending}>{productMutation.isPending ? 'Dodawanie...' : 'Dodaj Produkt'}</Button>
                     </form>
@@ -297,10 +216,42 @@ export default function AdminProductsPage() {
                             </div>
                             <input type="file" ref={fileInputRef} onChange={handleImageUpload} className="hidden" accept="image/png, image/jpeg, image/jpg" />
                         </div>
-                        <div><Label>Nazwa</Label><Input name="name" defaultValue={selectedProduct?.name} /></div>
-                        <div><Label>Opis</Label><Textarea name="description" defaultValue={selectedProduct?.description || ''} /></div>
-                        <div className="flex items-center space-x-2"><Switch id="isActive" name="isActive" defaultChecked={selectedProduct?.is_active} /><Label htmlFor="isActive">Produkt aktywny</Label></div>
-                        <Button type="submit" className="w-full" disabled={productUpdateMutation.isPending}>{productUpdateMutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}</Button>
+                        <div><Label>Nazwa</Label><Input value={editProductForm.name} onChange={e => setEditProductForm(prev => ({ ...prev, name: e.target.value }))} /></div>
+                        <div><Label>Opis</Label><Textarea value={editProductForm.description} onChange={e => setEditProductForm(prev => ({ ...prev, description: e.target.value }))} /></div>
+                        <div className="flex items-center space-x-2"><Switch checked={editProductForm.isActive} onCheckedChange={c => setEditProductForm(prev => ({ ...prev, isActive: c }))} /><Label>Produkt aktywny</Label></div>
+                        <div><Label>Kategorie</Label>
+                            <CategorySelector
+                                allCategories={categories || []}
+                                selectedIds={editProductForm.categoryIds}
+                                onSelectionChange={(ids) => setEditProductForm(prev => ({ ...prev, categoryIds: ids }))}
+                            />
+                        </div>
+                        <div className="flex justify-between pt-2">
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button type="button" variant="destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Usuń produkt
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Czy na pewno chcesz usunąć ten produkt?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Tej akcji nie można cofnąć. Produkt zostanie zarchiwizowany i ukryty w sklepie.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleProductDelete} disabled={productDeleteMutation.isPending}>
+                                            {productDeleteMutation.isPending ? 'Usuwanie...' : 'Tak, usuń'}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            <Button type="submit" disabled={productUpdateMutation.isPending}>
+                                {productUpdateMutation.isPending ? 'Zapisywanie...' : 'Zapisz Zmiany'}
+                            </Button>
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>
@@ -311,10 +262,69 @@ export default function AdminProductsPage() {
                     <form onSubmit={handleVariantUpdate} className="space-y-4 pt-4">
                         <div><Label>Ilość (szt.)</Label><Input name="quantity" type="number" defaultValue={editingVariant?.quantity} /></div>
                         <div><Label>Cena (PLN)</Label><Input name="price" type="number" step="0.01" defaultValue={(editingVariant?.price || 0) / 100} /></div>
-                        <Button type="submit" className="w-full" disabled={variantUpdateMutation.isPending}>{variantUpdateMutation.isPending ? 'Zapisywanie...' : 'Zapisz zmiany'}</Button>
+                        <div className="flex justify-between pt-2">
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button type="button" variant="destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" /> Usuń wariant
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Czy na pewno chcesz usunąć ten wariant?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            Tej akcji nie można cofnąć. Wariant zostanie zarchiwizowany.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleVariantDelete} disabled={variantDeleteMutation.isPending}>
+                                            {variantDeleteMutation.isPending ? 'Usuwanie...' : 'Tak, usuń'}
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                            <Button type="submit" disabled={variantUpdateMutation.isPending}>
+                                {variantUpdateMutation.isPending ? 'Zapisywanie...' : 'Zapisz zmiany'}
+                            </Button>
+                        </div>
                     </form>
                 </DialogContent>
             </Dialog>
         </div>
+    );
+}
+
+// --- NOWY KOMPONENT POMOCNICZY ---
+// Wydzielono logikę wyboru kategorii do osobnego komponentu dla czystości kodu.
+function CategorySelector({ allCategories, selectedIds, onSelectionChange }: { allCategories: Category[], selectedIds: string[], onSelectionChange: (ids: string[]) => void }) {
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" className="w-full justify-between">
+                    {selectedIds.length > 0 ? `${selectedIds.length} zaznaczono` : "Wybierz kategorie..."}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[300px] p-0">
+                <Command>
+                    <CommandInput placeholder="Szukaj kategorii..." />
+                    <CommandList>
+                        <CommandEmpty>Brak kategorii.</CommandEmpty>
+                        <CommandGroup>
+                            {allCategories.map(cat => (
+                                <CommandItem key={cat.id} value={cat.name} onSelect={() => {
+                                    const isSelected = selectedIds.includes(cat.id);
+                                    onSelectionChange(isSelected ? selectedIds.filter(id => id !== cat.id) : [...selectedIds, cat.id]);
+                                }}>
+                                    <Check className={cn("mr-2 h-4 w-4", selectedIds.includes(cat.id) ? "opacity-100" : "opacity-0")} />
+                                    {cat.name}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
     );
 }
