@@ -108,10 +108,20 @@ function configureIOS() {
         'Podfile',
         "pod 'FirebaseMessaging'",
         (content) => {
-            return content.replace(
-                "target 'App' do",
-                "target 'App' do\n  pod 'FirebaseMessaging'"
-            );
+            let newContent = content;
+            if (!content.includes("pod 'FirebaseMessaging'")) {
+                newContent = content.replace(
+                    "target 'App' do",
+                    "target 'App' do\n  pod 'FirebaseMessaging'"
+                );
+            }
+            if (!content.includes("pod 'FirebaseCore'")) {
+                newContent = newContent.replace(
+                    "target 'App' do",
+                    "target 'App' do\n  pod 'FirebaseCore'"
+                );
+            }
+            return newContent;
         }
     );
 }
