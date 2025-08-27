@@ -8,8 +8,12 @@ import { StaticImageData } from 'next/image';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { AxiosError } from 'axios';
+
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,24 +27,55 @@ import LemonIcon from '@/assets/avatars/lemon.svg';
 // Import komponentu do wyboru dostawy
 import { ShippingSelector } from '@/components/cart/ShippingSelector';
 
-// Definicja typu dla zniżki
-interface AppliedDiscount {
-    code: string;
-    discount: {
-        type: 'PERCENTAGE' | 'FIXED_AMOUNT';
-        value: number;
-    }
-}
+// --- SCHEMAT WALIDACJI ADRESU ---
+const shippingAddressSchema = z.object({
+    firstName: z.string()
+        .min(2, 'Imię musi mieć minimum 2 znaki')
+        .max(50, 'Imię może mieć maksymalnie 50 znaków')
+        .regex(/^[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s-]+$/, 'Imię może zawierać tylko litery, spacje i myślniki'),
+    lastName: z.string()
+        .min(2, 'Nazwisko musi mieć minimum 2 znaki')
+        .max(50, 'Nazwisko może mieć maksymalnie 50 znaków')
+        .regex(/^[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s-]+$/, 'Nazwisko może zawierać tylko litery, spacje i myślniki'),
+    street: z.string()
+        .min(5, 'Adres musi mieć minimum 5 znaków')
+        .max(100, 'Adres może mieć maksymalnie 100 znaków')
+        .refine(val => val.trim().length >= 5, 'Adres nie może składać się tylko ze spacji'),
+    city: z.string()
+        .min(2, 'Miasto musi mieć minimum 2 znaki')
+        .max(50, 'Miasto może mieć maksymalnie 50 znaków')
+        .regex(/^[a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s-]+$/, 'Miasto może zawierać tylko litery, spacje i myślniki'),
+    postalCode: z.string()
+        .regex(/^\d{2}-\d{3}$/, 'Kod pocztowy musi być w formacie XX-XXX (np. 00-000)')
+        .refine(val => val !== '00-000', 'Wprowadź prawidłowy kod pocztowy'),
+    phoneNumber: z.string()
+        .optional()
+        .or(z.string()
+            .min(1, 'Numer telefonu nie może być pusty')
+            .max(15, 'Numer telefonu może mieć maksymalnie 15 cyfr')
+            .regex(/^(\+48\s?)?[\d\s()-]{9,15}$/, 'Numer telefonu musi być w formacie polskim')
+            .refine(val => {
+                if (!val || val.trim() === '') return true; // Opcjonalne pole
+                const digitsOnly = val.replace(/\D/g, '');
+                return digitsOnly.length >= 9 && digitsOnly.length <= 11;
+            }, 'Numer telefonu musi zawierać 9-11 cyfr')
+            .refine(val => {
+                if (!val || val.trim() === '') return true;
+                const digitsOnly = val.replace(/\D/g, '');
+                // Sprawdź czy numer zaczyna się od poprawnych cyfr dla Polski
+                if (digitsOnly.startsWith('48')) {
+                    return digitsOnly.length === 11; // +48 + 9 cyfr
+                } else if (!digitsOnly.startsWith('48')) {
+                    return digitsOnly.length === 9; // lokalne 9 cyfr
+                }
+                return true;
+            }, 'Nieprawidłowy format numeru telefonu dla Polski')
+        ),
+});
 
-// --- NOWY TYP DLA ADRESU DOSTAWY ---
-interface ShippingAddress {
-    firstName: string;
-    lastName: string;
-    street: string;
-    city: string;
-    postalCode: string;
-    phoneNumber: string;
-}
+// --- TYPY ---
+type AppliedDiscount = { code: string; discount: { type: 'PERCENTAGE' | 'FIXED_AMOUNT'; value: number } };
+type ShippingAddress = z.infer<typeof shippingAddressSchema>;
 
 // Mapowanie ikon produktów
 const productIcons: { [key: string]: StaticImageData } = {
@@ -52,26 +87,24 @@ export default function KoszykPage() {
     const { items, removeItem, updateItemQuantity, clearCart } = useCartStore();
     const [promoCode, setPromoCode] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
-    const [selectedShipping, setSelectedShipping] = useState<{ id: string; price: number } | null>(null);
 
-    // --- NOWY STAN DLA FORMULARZA ADRESOWEGO ---
-    const [shippingAddress, setShippingAddress] = useState<ShippingAddress>({
-        firstName: '',
-        lastName: '',
-        street: '',
-        city: '',
-        postalCode: '',
-        phoneNumber: '',
+    const [selectedShipping, setSelectedShipping] = useState<{
+        id: string;
+        price: number;
+    } | null>(null);
+
+    // --- FORMULARZ Z WALIDACJĄ ---
+    const form = useForm<ShippingAddress>({
+        resolver: zodResolver(shippingAddressSchema),
+        defaultValues: {
+            firstName: '',
+            lastName: '',
+            street: '',
+            city: '',
+            postalCode: '',
+            phoneNumber: '',
+        }
     });
-
-    // Handler do aktualizacji stanu adresu
-    const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
-        setShippingAddress(prevState => ({
-            ...prevState,
-            [name]: value,
-        }));
-    };
 
     // Obliczenia sum, zniżek i kosztów
     const subtotal = useMemo(() => items.reduce((acc, item) => acc + (item.price * item.quantity), 0), [items]);
@@ -114,47 +147,90 @@ export default function KoszykPage() {
 
     // Mutacja dla kodu promocyjnego
     const promoMutation = useMutation({
-        mutationFn: (code: string) => api.post('/store/validate-promo', { code }),
+        mutationFn: (code: string) => {
+            const trimmedCode = code.trim().toUpperCase();
+            if (trimmedCode.length < 3) {
+                throw new Error('Kod promocyjny musi mieć minimum 3 znaki');
+            }
+            if (trimmedCode.length > 20) {
+                throw new Error('Kod promocyjny może mieć maksymalnie 20 znaków');
+            }
+            if (!/^[A-Z0-9]+$/.test(trimmedCode)) {
+                throw new Error('Kod promocyjny może zawierać tylko litery i cyfry');
+            }
+            return api.post('/store/validate-promo', { code: trimmedCode });
+        },
         onSuccess: (response) => {
             setAppliedDiscount(response.data);
+            setPromoCode(''); // Wyczyść pole po pomyślnym zastosowaniu
             toast.success(`Kod rabatowy "${response.data.code}" został pomyślnie zastosowany!`);
         },
-        onError: (error: AxiosError<{ message: string }>) => {
-            toast.error('Błąd kodu rabatowego', { description: error.response?.data?.message || 'Wystąpił błąd.' });
-        }
+        onError: (error: unknown) => {
+            let message = 'Wystąpił błąd podczas sprawdzania kodu rabatowego.';
+
+            if (error instanceof AxiosError) {
+                message = error.response?.data?.message || error.message || message;
+            } else if (error instanceof Error) {
+                message = error.message;
+            }
+
+            toast.error('Błąd kodu rabatowego', { description: message });
+        },
     });
 
-    const handleApplyPromoCode = () => {
-        if (!promoCode) return;
-        promoMutation.mutate(promoCode);
-    };
-
-    // --- ZAKTUALIZOWANA FUNKCJA CHECKOUT ---
-    const handleCheckout = () => {
-        // Walidacja wyboru dostawy
-        if (!selectedShipping) {
-            toast.error('Proszę wybrać metodę dostawy.');
+    const handleApplyPromo = () => {
+        const trimmedCode = promoCode.trim();
+        if (!trimmedCode) {
+            toast.error('Wprowadź kod promocyjny');
             return;
         }
-        // Prosta walidacja pól adresowych
-        for (const [key, value] of Object.entries(shippingAddress)) {
-            if (!value && key !== 'phoneNumber') { // numer telefonu jest opcjonalny
-                toast.error('Proszę wypełnić wszystkie pola adresowe.');
-                return;
-            }
+        if (appliedDiscount) {
+            toast.error('Kod rabatowy jest już zastosowany. Usuń obecny kod, aby dodać nowy.');
+            return;
+        }
+        promoMutation.mutate(trimmedCode);
+    };
+
+    const handleRemovePromo = () => {
+        setAppliedDiscount(null);
+        setPromoCode('');
+        toast.success('Kod rabatowy został usunięty');
+    };
+
+    const handleCheckout = (data: ShippingAddress) => {
+        // Walidacja podstawowa
+        if (items.length === 0) {
+            toast.error('Koszyk jest pusty');
+            return;
         }
 
-        const itemsToCheckout = items.map(item => ({
+        if (!selectedShipping) {
+            toast.error('Wybierz metodę dostawy');
+            return;
+        }
+
+        // Walidacja ilości produktów
+        const invalidItems = items.filter(item => item.quantity <= 0 || item.quantity > 999);
+        if (invalidItems.length > 0) {
+            toast.error('Sprawdź ilości produktów w koszyku');
+            return;
+        }
+
+        const itemsForCheckout = items.map(item => ({
             priceId: item.stripePriceId,
-            quantity: item.quantity,
+            quantity: item.quantity
         }));
 
-        checkoutMutation.mutate({
-            items: itemsToCheckout,
+        const checkoutData = {
+            items: itemsForCheckout,
             couponCode: appliedDiscount?.code,
             shippingMethodId: selectedShipping.id,
-            shippingAddress: shippingAddress, // <-- Przekazanie danych adresowych
-        });
+            shippingAddress: {
+                ...data,
+            }
+        };
+
+        checkoutMutation.mutate(checkoutData);
     };
 
     return (
@@ -186,7 +262,31 @@ export default function KoszykPage() {
                                                 <TableCell>{item.name}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
-                                                        <Input type="number" min="1" value={item.quantity} onChange={(e) => updateItemQuantity(item.id, parseInt(e.target.value, 10))} className="w-20" />
+                                                        <Input
+                                                            type="number"
+                                                            min="1"
+                                                            max="999"
+                                                            value={item.quantity}
+                                                            onChange={(e) => {
+                                                                const newQuantity = parseInt(e.target.value);
+                                                                if (isNaN(newQuantity) || newQuantity < 1) {
+                                                                    updateItemQuantity(item.id, 1);
+                                                                    toast.error('Minimalna ilość to 1');
+                                                                } else if (newQuantity > 999) {
+                                                                    updateItemQuantity(item.id, 999);
+                                                                    toast.error('Maksymalna ilość to 999');
+                                                                } else {
+                                                                    updateItemQuantity(item.id, newQuantity);
+                                                                }
+                                                            }}
+                                                            onBlur={(e) => {
+                                                                const value = parseInt(e.target.value);
+                                                                if (isNaN(value) || value < 1) {
+                                                                    updateItemQuantity(item.id, 1);
+                                                                }
+                                                            }}
+                                                            className="w-20"
+                                                        />
                                                         <Button variant="ghost" size="icon" onClick={() => removeItem(item.id)}><Trash2 className="h-4 w-4" /></Button>
                                                     </div>
                                                 </TableCell>
@@ -199,20 +299,217 @@ export default function KoszykPage() {
                             </CardContent>
                         </Card>
 
-                        {/* --- NOWY FORMULARZ ADRESOWY --- */}
+                        {/* --- FORMULARZ ADRESOWY Z WALIDACJĄ --- */}
                         <Card>
                             <CardHeader><CardTitle>Adres Dostawy</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div><Label htmlFor="firstName">Imię</Label><Input id="firstName" name="firstName" value={shippingAddress.firstName} onChange={handleAddressChange} required /></div>
-                                    <div><Label htmlFor="lastName">Nazwisko</Label><Input id="lastName" name="lastName" value={shippingAddress.lastName} onChange={handleAddressChange} required /></div>
+                                    <div>
+                                        <Label htmlFor="firstName">Imię</Label>
+                                        <Input
+                                            id="firstName"
+                                            {...form.register('firstName')}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                // Pozwól tylko na litery, spacje i myślniki
+                                                const filteredValue = value.replace(/[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s-]/g, '');
+                                                if (filteredValue !== value) {
+                                                    e.target.value = filteredValue;
+                                                }
+                                                form.setValue('firstName', filteredValue, { shouldValidate: true });
+                                                form.trigger('firstName');
+                                            }}
+                                            maxLength={50}
+                                            className={form.formState.errors.firstName ? 'border-red-500' : ''}
+                                        />
+                                        {form.formState.errors.firstName && (
+                                            <p className="text-red-500 text-sm mt-1">{form.formState.errors.firstName.message}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="lastName">Nazwisko</Label>
+                                        <Input
+                                            id="lastName"
+                                            {...form.register('lastName')}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                // Pozwól tylko na litery, spacje i myślniki
+                                                const filteredValue = value.replace(/[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s-]/g, '');
+                                                if (filteredValue !== value) {
+                                                    e.target.value = filteredValue;
+                                                }
+                                                form.setValue('lastName', filteredValue, { shouldValidate: true });
+                                                form.trigger('lastName');
+                                            }}
+                                            maxLength={50}
+                                            className={form.formState.errors.lastName ? 'border-red-500' : ''}
+                                        />
+                                        {form.formState.errors.lastName && (
+                                            <p className="text-red-500 text-sm mt-1">{form.formState.errors.lastName.message}</p>
+                                        )}
+                                    </div>
                                 </div>
-                                <div><Label htmlFor="street">Ulica i numer</Label><Input id="street" name="street" value={shippingAddress.street} onChange={handleAddressChange} required /></div>
+                                <div>
+                                    <Label htmlFor="street">Ulica i numer</Label>
+                                    <Input
+                                        id="street"
+                                        {...form.register('street')}
+                                        onChange={(e) => {
+                                            const value = e.target.value.trimStart(); // Usuń spacje z początku
+                                            e.target.value = value;
+                                            form.setValue('street', value, { shouldValidate: true });
+                                            form.trigger('street');
+                                        }}
+                                        maxLength={100}
+                                        className={form.formState.errors.street ? 'border-red-500' : ''}
+                                    />
+                                    {form.formState.errors.street && (
+                                        <p className="text-red-500 text-sm mt-1">{form.formState.errors.street.message}</p>
+                                    )}
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div><Label htmlFor="postalCode">Kod pocztowy</Label><Input id="postalCode" name="postalCode" value={shippingAddress.postalCode} onChange={handleAddressChange} required /></div>
-                                    <div><Label htmlFor="city">Miasto</Label><Input id="city" name="city" value={shippingAddress.city} onChange={handleAddressChange} required /></div>
+                                    <div>
+                                        <Label htmlFor="postalCode">Kod pocztowy</Label>
+                                        <Input
+                                            id="postalCode"
+                                            {...form.register('postalCode')}
+                                            placeholder="00-000"
+                                            onChange={(e) => {
+                                                let value = e.target.value.replace(/\D/g, ''); // Usuń wszystko oprócz cyfr
+
+                                                // Automatycznie dodaj myślnik po 2 cyfrach
+                                                if (value.length >= 2) {
+                                                    value = value.slice(0, 2) + '-' + value.slice(2, 5);
+                                                }
+
+                                                // Aktualizuj pole w formularzu
+                                                e.target.value = value;
+                                                form.setValue('postalCode', value, { shouldValidate: true });
+                                                form.trigger('postalCode'); // Wywołaj walidację
+                                            }}
+                                            onKeyDown={(e) => {
+                                                // Pozwól na usuwanie i nawigację
+                                                if (['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                                                    return;
+                                                }
+                                                // Pozwól tylko na cyfry
+                                                if (!/\d/.test(e.key)) {
+                                                    e.preventDefault();
+                                                }
+                                            }}
+                                            maxLength={6}
+                                            className={form.formState.errors.postalCode ? 'border-red-500' : ''}
+                                        />
+                                        {form.formState.errors.postalCode && (
+                                            <p className="text-red-500 text-sm mt-1">{form.formState.errors.postalCode.message}</p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <Label htmlFor="city">Miasto</Label>
+                                        <Input
+                                            id="city"
+                                            {...form.register('city')}
+                                            onChange={(e) => {
+                                                const value = e.target.value;
+                                                // Pozwól tylko na litery, spacje i myślniki
+                                                const filteredValue = value.replace(/[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s-]/g, '');
+                                                if (filteredValue !== value) {
+                                                    e.target.value = filteredValue;
+                                                }
+                                                form.setValue('city', filteredValue, { shouldValidate: true });
+                                                form.trigger('city');
+                                            }}
+                                            maxLength={50}
+                                            className={form.formState.errors.city ? 'border-red-500' : ''}
+                                        />
+                                        {form.formState.errors.city && (
+                                            <p className="text-red-500 text-sm mt-1">{form.formState.errors.city.message}</p>
+                                        )}
+                                    </div>
                                 </div>
-                                <div><Label htmlFor="phoneNumber">Numer telefonu (opcjonalnie)</Label><Input id="phoneNumber" name="phoneNumber" type="tel" value={shippingAddress.phoneNumber} onChange={handleAddressChange} /></div>
+                                <div>
+                                    <Label htmlFor="phoneNumber">Numer telefonu (opcjonalnie)</Label>
+                                    <Input
+                                        id="phoneNumber"
+                                        type="tel"
+                                        {...form.register('phoneNumber')}
+                                        placeholder="+48 123 456 789"
+                                        onChange={(e) => {
+                                            let value = e.target.value;
+
+                                            // Usuń wszystko oprócz cyfr, spacji, myślników, nawiasów i znaku +
+                                            value = value.replace(/[^\d\s+()-]/g, '');
+
+                                            // Formatowanie automatyczne dla polskich numerów
+                                            const digitsOnly = value.replace(/\D/g, '');
+
+                                            // Jeśli użytkownik wpisuje 9 cyfr bez prefiksu, dodaj +48
+                                            if (digitsOnly.length === 9 && !value.includes('+48')) {
+                                                value = `+48 ${digitsOnly.slice(0,3)} ${digitsOnly.slice(3,6)} ${digitsOnly.slice(6,9)}`;
+                                            }
+                                            // Jeśli zaczyna się od 48, formatuj jako +48
+                                            else if (digitsOnly.startsWith('48') && digitsOnly.length === 11) {
+                                                const phoneDigits = digitsOnly.slice(2);
+                                                value = `+48 ${phoneDigits.slice(0,3)} ${phoneDigits.slice(3,6)} ${phoneDigits.slice(6,9)}`;
+                                            }
+                                            // Podstawowe formatowanie dla innych przypadków
+                                            else if (digitsOnly.length > 0 && !value.includes('+48')) {
+                                                if (digitsOnly.length <= 3) {
+                                                    value = digitsOnly;
+                                                } else if (digitsOnly.length <= 6) {
+                                                    value = `${digitsOnly.slice(0,3)} ${digitsOnly.slice(3)}`;
+                                                } else if (digitsOnly.length <= 9) {
+                                                    value = `${digitsOnly.slice(0,3)} ${digitsOnly.slice(3,6)} ${digitsOnly.slice(6)}`;
+                                                }
+                                            }
+
+                                            e.target.value = value;
+                                            form.setValue('phoneNumber', value, { shouldValidate: true });
+                                            form.trigger('phoneNumber');
+                                        }}
+                                        onKeyDown={(e) => {
+                                            // Pozwól na usuwanie i nawigację
+                                            if (['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+                                                return;
+                                            }
+                                            // Pozwól tylko na cyfry, spacje, myślniki, nawiasy i znak +
+                                            if (!/[\d\s+()-]/.test(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                            // Ogranicz długość wprowadzania
+                                            const currentLength = (e.target as HTMLInputElement).value.replace(/\D/g, '').length;
+                                            if (currentLength >= 11 && /\d/.test(e.key)) {
+                                                e.preventDefault();
+                                            }
+                                        }}
+                                        onBlur={(e) => {
+                                            // Dodatkowa walidacja po opuszczeniu pola
+                                            const value = e.target.value;
+                                            const digitsOnly = value.replace(/\D/g, '');
+
+                                            if (digitsOnly.length > 0 && digitsOnly.length < 9) {
+                                                form.setError('phoneNumber', {
+                                                    type: 'manual',
+                                                    message: `Numer telefonu jest za krótki (${digitsOnly.length}/9 cyfr)`
+                                                });
+                                            } else if (digitsOnly.length > 11) {
+                                                form.setError('phoneNumber', {
+                                                    type: 'manual',
+                                                    message: 'Numer telefonu jest za długi'
+                                                });
+                                            } else {
+                                                form.clearErrors('phoneNumber');
+                                            }
+
+                                            form.trigger('phoneNumber');
+                                        }}
+                                        maxLength={15}
+                                        className={form.formState.errors.phoneNumber ? 'border-red-500' : ''}
+                                    />
+                                    {form.formState.errors.phoneNumber && (
+                                        <p className="text-red-500 text-sm mt-1">{form.formState.errors.phoneNumber.message}</p>
+                                    )}
+                                </div>
                             </CardContent>
                         </Card>
                     </div>
@@ -223,15 +520,48 @@ export default function KoszykPage() {
                             <CardHeader><CardTitle>Podsumowanie</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex justify-between"><span>Suma produktów:</span><span>{(subtotal / 100).toFixed(2)} zł</span></div>
-                                <div className="flex items-end gap-2">
-                                    <div className="flex-grow"><Label htmlFor="promo">Kod promocyjny</Label><Input id="promo" value={promoCode} onChange={(e) => setPromoCode(e.target.value)} /></div>
-                                    <Button onClick={handleApplyPromoCode} disabled={promoMutation.isPending}>{promoMutation.isPending ? '...' : 'Zastosuj'}</Button>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        placeholder="Kod promocyjny (np. SAVE20)"
+                                        value={promoCode}
+                                        onChange={(e) => {
+                                            const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                                            if (value.length <= 20) {
+                                                setPromoCode(value);
+                                            }
+                                        }}
+                                        disabled={!!appliedDiscount}
+                                        maxLength={20}
+                                    />
+                                    {appliedDiscount ? (
+                                        <Button
+                                            variant="outline"
+                                            onClick={handleRemovePromo}
+                                            className="whitespace-nowrap"
+                                        >
+                                            Usuń kod
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            variant="outline"
+                                            onClick={handleApplyPromo}
+                                            disabled={promoMutation.isPending || !promoCode.trim()}
+                                            className="whitespace-nowrap"
+                                        >
+                                            {promoMutation.isPending ? 'Sprawdzam...' : 'Zastosuj'}
+                                        </Button>
+                                    )}
                                 </div>
                                 {appliedDiscount && (<div className="flex justify-between text-green-600"><span>Rabat ({appliedDiscount.code}):</span><span>-{(discountAmount / 100).toFixed(2)} zł</span></div>)}
-                                <ShippingSelector selectedId={selectedShipping?.id ?? null} onChange={(id, price) => setSelectedShipping({ id, price })} />
+                                <ShippingSelector
+                                    selectedId={selectedShipping?.id ?? null}
+                                    onChange={(id, price) =>
+                                        setSelectedShipping({ id, price })
+                                    }
+                                />
                                 <Separator />
                                 <div className="flex justify-between font-bold text-xl"><span>Razem:</span><span>{(total / 100).toFixed(2)} zł</span></div>
-                                <Button onClick={handleCheckout} disabled={items.length === 0 || checkoutMutation.isPending} className="w-full mt-4" size="lg">
+                                <Button onClick={() => form.handleSubmit(handleCheckout)()} disabled={items.length === 0 || checkoutMutation.isPending} className="w-full mt-4" size="lg">
                                     {checkoutMutation.isPending ? 'Przetwarzanie...' : 'Kupuję i płacę'}
                                 </Button>
                             </CardContent>
