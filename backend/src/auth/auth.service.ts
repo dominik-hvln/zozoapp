@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, NotFoundException } from '@nestjs/common';
 import { UsersService } from 'src/users/users.service';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
@@ -68,6 +68,19 @@ export class AuthService {
         return {
             access_token: accessToken,
         };
+    }
+
+    async getProfile(userId: string) {
+        const user = await this.prisma.users.findUnique({
+            where: { id: userId },
+        });
+
+        if (!user) {
+            throw new NotFoundException('Użytkownik nie został znaleziony.');
+        }
+
+        const { password_hash, ...result } = user;
+        return result;
     }
 
     async refreshSession(userId: string) {

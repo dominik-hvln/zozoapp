@@ -135,3 +135,7 @@ body {
     background-color: #466EC6;
     color: #fff !important;
 }
+
+.pt-safe {
+    padding-top: env(safe-area-inset-top);
+}
