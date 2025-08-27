@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "setup:ios": "npm run build && npx cap add ios && node scripts/configure-ios.mjs && npx cap update ios && npx cap open ios"
   },
   "dependencies": {
     "@capacitor/android": "^7.4.3",

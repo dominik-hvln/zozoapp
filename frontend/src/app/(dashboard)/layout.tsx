@@ -174,6 +174,25 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     )}
                 </main>
             </div>
+            <button
+                onClick={async () => {
+                    try {
+                        console.log('--- TEST MANUALNY: START ---');
+                        const { initializePushNotifications } = await import('@/lib/push-notifications.service');
+                        await initializePushNotifications();
+                        console.log('--- TEST MANUALNY: ZAKOŃCZONO BEZ BŁĘDU ---');
+                    } catch (e) {
+                        console.error('--- TEST MANUALNY: WYSTĄPIŁ KRYTYCZNY BŁĄD ---', e);
+                    }
+                }}
+                style={{
+                    position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999,
+                    padding: '15px', backgroundColor: 'blue', color: 'white',
+                    fontSize: '16px', borderRadius: '10px', border: 'none'
+                }}
+            >
+                Testuj Push Manualnie
+            </button>
         </>
     );
 }
