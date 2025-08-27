@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "362144978352",
+    "project_id": "zozoapp-fdd3a",
+    "storage_bucket": "zozoapp-fdd3a.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:362144978352:android:7d571528d6742d09e6b275",
+        "android_client_info": {
+          "package_name": "pl.appity.zozoapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUUvV391fyVgCjq6Q0lv8ey-IHVOdSj48"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
