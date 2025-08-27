@@ -14,7 +14,7 @@ import { Header } from '@/components/layout/Header';
 import { PartyPopper, XCircle, Loader2 } from 'lucide-react';
 import { App } from '@capacitor/app';
 import { cn } from '@/lib/utils';
-import { initializePushNotifications } from '@/lib/push-notifications.service';
+
 
 // --- FUNKCJE API (bez zmian) ---
 const getFullProfile = async () => (await api.get('/auth/profile')).data;
@@ -117,13 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
     }, [token, router, isInitialized]);
 
-    // Inicjalizuj powiadomienia push dopiero po załadowaniu profilu użytkownika
-    useEffect(() => {
-        if (fullProfile && token && !isProfileLoading) {
-            console.log('[DASHBOARD] Inicjalizacja powiadomień push dla zalogowanego użytkownika');
-            initializePushNotifications();
-        }
-    }, [fullProfile, token, isProfileLoading]);
+    // Powiadomienia push będą inicjalizowane po zalogowaniu w auth.store
 
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
@@ -180,25 +174,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     )}
                 </main>
             </div>
-            <button
-                onClick={async () => {
-                    try {
-                        console.log('--- TEST MANUALNY: START ---');
-                        const { initializePushNotifications } = await import('@/lib/push-notifications.service');
-                        await initializePushNotifications();
-                        console.log('--- TEST MANUALNY: ZAKOŃCZONO BEZ BŁĘDU ---');
-                    } catch (e) {
-                        console.error('--- TEST MANUALNY: WYSTĄPIŁ KRYTYCZNY BŁĄD ---', e);
-                    }
-                }}
-                style={{
-                    position: 'fixed', bottom: '20px', right: '20px', zIndex: 9999,
-                    padding: '15px', backgroundColor: 'blue', color: 'white',
-                    fontSize: '16px', borderRadius: '10px', border: 'none'
-                }}
-            >
-                Testuj Push Manualnie
-            </button>
+
         </>
     );
 }

@@ -80,6 +80,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
         const user = decodeToken(token);
         set({ token, user });
+
+        // Inicjalizuj powiadomienia push po zalogowaniu (tylko na urządzeniach mobilnych)
+        if (Capacitor.isNativePlatform()) {
+            console.log('[AUTH] Inicjalizacja powiadomień push po zalogowaniu...');
+            try {
+                const { initializePushNotifications } = await import('@/lib/push-notifications.service');
+                await initializePushNotifications();
+            } catch (error) {
+                console.error('[AUTH] Błąd podczas inicjalizacji powiadomień push:', error);
+            }
+        }
     },
 
     // --- ZAKTUALIZOWANA FUNKCJA ---
