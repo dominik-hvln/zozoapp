@@ -115,10 +115,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (isInitialized && !token) {
             router.push('/login');
         }
-        if (isInitialized && token) {
+    }, [token, router, isInitialized]);
+
+    // Inicjalizuj powiadomienia push dopiero po załadowaniu profilu użytkownika
+    useEffect(() => {
+        if (fullProfile && token && !isProfileLoading) {
+            console.log('[DASHBOARD] Inicjalizacja powiadomień push dla zalogowanego użytkownika');
             initializePushNotifications();
         }
-    }, [token, router, isInitialized]);
+    }, [fullProfile, token, isProfileLoading]);
 
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
