@@ -142,24 +142,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
     }, [queryClient, setToken]);
 
-    // Inicjalizacja powiadomień push po zalogowaniu
-    useEffect(() => {
-        if (isInitialized && token) {
-            // Użytkownik jest zalogowany, inicjalizuj powiadomienia push
-            const initializePushNotificationsAfterLogin = async () => {
-                try {
-                    console.log('[DASHBOARD] Użytkownik zalogowany, inicjalizuję powiadomienia push...');
-                    const { initializePushNotifications } = await import('@/lib/push-notifications.service');
-                    initializePushNotifications();
-                } catch (error) {
-                    console.error('[DASHBOARD] Błąd podczas inicjalizacji powiadomień push:', error);
-                }
-            };
-
-            initializePushNotificationsAfterLogin();
-        }
-    }, [isInitialized, token]);
-
 
     if (!isInitialized || (token && isProfileLoading)) {
         return <div className="flex h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
