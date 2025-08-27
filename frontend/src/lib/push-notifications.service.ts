@@ -1,3 +1,4 @@
+
 import { Capacitor } from '@capacitor/core';
 import {
     PushNotifications,
@@ -14,7 +15,7 @@ export const initializePushNotifications = (): void => {
         return;
     }
 
-    console.log('[PUSH] Inicjalizacja powiadomień push...');
+    console.log('[PUSH] Inicjalizacja powiadomień push po zalogowaniu...');
 
     const registerTokenOnServer = async (token: string) => {
         try {
@@ -53,23 +54,7 @@ export const initializePushNotifications = (): void => {
         }
     };
 
-    // 1. Poproś o zgodę
-    console.log('[PUSH] Proszę o zgodę na powiadomienia...');
-    PushNotifications.requestPermissions().then(result => {
-        console.log('[PUSH] Wynik zapytania o zgodę:', result);
-        if (result.receive === 'granted') {
-            console.log('[PUSH] Zgoda udzielona, rejestrowanie urządzenia...');
-            // 2. Jeśli jest zgoda, zarejestruj urządzenie
-            PushNotifications.register();
-        } else {
-            console.warn('[PUSH] Użytkownik nie wyraził zgody na powiadomienia:', result);
-            toast.error('Powiadomienia wymagają zgody użytkownika');
-        }
-    }).catch(error => {
-        console.error('[PUSH] Błąd podczas proszenia o zgodę:', error);
-    });
-
-    // Listener: sukces rejestracji
+    // Listener: sukces rejestracji - dodaj przed requestPermissions
     PushNotifications.addListener('registration', (token: Token) => {
         console.log('[PUSH] Rejestracja w usłudze push (FCM/APNS) pomyślna');
         console.log('[PUSH] Otrzymany token:', token.value.substring(0, 20) + '...');
@@ -98,5 +83,22 @@ export const initializePushNotifications = (): void => {
         console.log('[PUSH] Dane powiadomienia:', action.notification);
         // Tutaj możesz dodać nawigację do konkretnego ekranu
         toast.info('Powiadomienie zostało otwarte');
+    });
+
+    // 1. Poproś o zgodę i zarejestruj urządzenie
+    console.log('[PUSH] Proszę o zgodę na powiadomienia...');
+    PushNotifications.requestPermissions().then(result => {
+        console.log('[PUSH] Wynik zapytania o zgodę:', result);
+        if (result.receive === 'granted') {
+            console.log('[PUSH] Zgoda udzielona, rejestrowanie urządzenia...');
+            // 2. Jeśli jest zgoda, zarejestruj urządzenie
+            PushNotifications.register();
+        } else {
+            console.warn('[PUSH] Użytkownik nie wyraził zgody na powiadomienia:', result);
+            toast.error('Powiadomienia wymagają zgody użytkownika');
+        }
+    }).catch(error => {
+        console.error('[PUSH] Błąd podczas proszenia o zgodę:', error);
+        toast.error('Błąd podczas inicjalizacji powiadomień');
     });
 };
