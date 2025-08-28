@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -7,6 +8,10 @@ import { toast } from 'sonner';
 import Image from 'next/image';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PlusCircle} from 'lucide-react';
 import AppleIcon from '@/assets/avatars/apple.svg';
@@ -24,6 +29,7 @@ interface Child {
     allergies: string | null;
     _count: { assignments: number };
 }
+
 const getChildren = async (): Promise<Child[]> => (await api.get('/children')).data;
 const addChild = async (data: Partial<Child>) => (await api.post('/children', data)).data;
 const updateChild = async ({ id, data }: { id: string, data: Partial<Child> }) => (await api.put(`/children/${id}`, data)).data;
@@ -60,6 +66,7 @@ export default function DzieciPage() {
             queryClient.invalidateQueries({ queryKey: ['children'] });
             toast.success(editingChild ? 'Profil dziecka zaktualizowany!' : 'Profil dziecka dodany!');
             setDialogOpen(false);
+            resetForm();
         },
         onError: () => toast.error('Wystąpił błąd.'),
     });
@@ -81,6 +88,17 @@ export default function DzieciPage() {
         childMutation.mutate(formData);
     };
 
+    const resetForm = () => {
+        setFormData({
+            name: '',
+            date_of_birth: undefined,
+            important_info: '',
+            illnesses: '',
+            allergies: ''
+        });
+        setEditingChild(null);
+    };
+
     function openEditDialog(child: Child) {
         setEditingChild(child);
         setFormData({
@@ -94,8 +112,7 @@ export default function DzieciPage() {
     }
 
     function openNewDialog() {
-        setEditingChild(null);
-        setFormData({ name: '', date_of_birth: undefined, important_info: '', illnesses: '', allergies: '' });
+        resetForm();
         setDialogOpen(true);
     }
 
@@ -106,7 +123,81 @@ export default function DzieciPage() {
         <Card className="space-y-6">
             <CardHeader className="flex items-center justify-between mb-0">
                 <h1 className="text-3xl font-bold">Twoje Dzieci</h1>
-                <Button onClick={openNewDialog}><PlusCircle className="mr-2 h-4 w-4" />Dodaj Dziecko</Button>
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button onClick={openNewDialog}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Dodaj Dziecko
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+                        <DialogHeader>
+                            <DialogTitle>{editingChild ? 'Edytuj profil dziecka' : 'Dodaj nowe dziecko'}</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleFormSubmit} className="space-y-4">
+                            <div>
+                                <Label htmlFor="name">Imię *</Label>
+                                <Input
+                                    id="name"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                                    placeholder="Wprowadź imię dziecka"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="date_of_birth">Data urodzenia</Label>
+                                <Input
+                                    id="date_of_birth"
+                                    type="date"
+                                    value={formData.date_of_birth ? formData.date_of_birth.toISOString().split('T')[0] : ''}
+                                    onChange={(e) => setFormData(prev => ({
+                                        ...prev,
+                                        date_of_birth: e.target.value ? new Date(e.target.value) : undefined
+                                    }))}
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="important_info">Ważne informacje</Label>
+                                <Textarea
+                                    id="important_info"
+                                    value={formData.important_info}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, important_info: e.target.value }))}
+                                    placeholder="Wprowadź ważne informacje o dziecku"
+                                    rows={3}
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="illnesses">Choroby</Label>
+                                <Textarea
+                                    id="illnesses"
+                                    value={formData.illnesses}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, illnesses: e.target.value }))}
+                                    placeholder="Wprowadź informacje o chorobach"
+                                    rows={3}
+                                />
+                            </div>
+                            <div>
+                                <Label htmlFor="allergies">Alergie</Label>
+                                <Textarea
+                                    id="allergies"
+                                    value={formData.allergies}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, allergies: e.target.value }))}
+                                    placeholder="Wprowadź informacje o alergiach"
+                                    rows={3}
+                                />
+                            </div>
+                            <div className="flex gap-2 pt-4">
+                                <Button type="submit" disabled={childMutation.isPending}>
+                                    {childMutation.isPending ? 'Zapisywanie...' : (editingChild ? 'Zaktualizuj' : 'Dodaj dziecko')}
+                                </Button>
+                                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                                    Anuluj
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </CardHeader>
 
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
@@ -121,8 +212,8 @@ export default function DzieciPage() {
                                 </AvatarFallback>
                             </Avatar>
                             <p className="mt-2 text-sm font-medium">{child.name}</p>
-                            <p className={`text-xs ${child._count.assignments > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                {child._count.assignments > 0 ? 'Aktywny tatuaż' : 'Brak tatuażu'}
+                            <p className={`text-xs ${(child._count?.assignments || 0) > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {(child._count?.assignments || 0) > 0 ? 'Aktywny tatuaż' : 'Brak tatuażu'}
                             </p>
                         </Link>
                     )

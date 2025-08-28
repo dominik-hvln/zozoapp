@@ -65,7 +65,7 @@ export default function ProfilPage() {
                     <CardHeader><CardTitle>Informacje o koncie</CardTitle></CardHeader>
                     <CardContent className="text-sm space-y-2">
                         <p>Data utworzenia konta: {new Date(profile.created_at).toLocaleDateString('pl-PL')}</p>
-                        <p>Liczba aktywnych kodów: {profile._count.assignments}</p>
+                        <p>Liczba aktywnych kodów: {profile._count?.assignments || 0}</p>
                         <p>Liczba skanów QR: {profile.scansCount}</p>
                         <p>Subskrypcja: {profile.subscriptionStatus}</p>
                     </CardContent>
@@ -92,7 +92,7 @@ export default function ProfilPage() {
                 <Card>
                     <CardHeader><CardTitle>Twoje dzieci</CardTitle></CardHeader>
                     <CardContent className="space-y-4">
-                        {profile.children.map(child => {
+                        {profile.children?.map((child) => {
                             const FallbackIcon = getFallbackAvatar(child.id);
                             return (
                                 <div key={child.id} className="border rounded-lg p-4 flex items-center justify-between">
@@ -103,7 +103,7 @@ export default function ProfilPage() {
                                         </Avatar>
                                         <div>
                                             <p className="font-semibold">{child.name}</p>
-                                            <p className="text-sm text-muted-foreground">{child._count.assignments} aktywnych tatuaży</p>
+                                            <p className="text-sm text-muted-foreground">{child._count?.assignments || 0} aktywnych tatuaży</p>
                                         </div>
                                     </div>
                                     <Button asChild>
@@ -112,6 +112,9 @@ export default function ProfilPage() {
                                 </div>
                             );
                         })}
+                        {profile.children && profile.children.length === 0 && (
+                            <p className="text-muted-foreground text-center py-8">Nie dodałeś jeszcze żadnego dziecka.</p>
+                        )}
                     </CardContent>
                 </Card>
             </div>

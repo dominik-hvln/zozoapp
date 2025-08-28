@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useEffect } from 'react';
-import { useAuthStore } from '@/store/auth.store'; // Potrzebny import
 
 // Import komponentów
 import { Button } from '@/components/ui/button';
@@ -33,7 +32,6 @@ const updateProfile = async (data: ProfileFormValues) => (await api.patch('/prof
 // --- KOMPONENT ---
 export function ProfileForm({ profileData }: { profileData: ProfileData | undefined }) {
     const queryClient = useQueryClient();
-    const { setToken } = useAuthStore(); // Pobieramy setToken
 
     const form = useForm<ProfileFormValues>({
         resolver: zodResolver(profileSchema),
@@ -59,19 +57,14 @@ export function ProfileForm({ profileData }: { profileData: ProfileData | undefi
         onSuccess: async () => {
             toast.success('Profil został pomyślnie zaktualizowany!');
 
-            // OSTATECZNA POPRAWKA: Odświeżamy sesję po zapisaniu zmian
-            try {
-                const response = await api.post('/auth/refresh');
-                setToken(response.data.access_token);
-            } catch (error) {
-                toast.error('Nie udało się odświeżyć sesji.');
-            }
-
-            // Unieważniamy cache, aby mieć pewność, że wszystko jest świeże
+            // Unieważniamy cache, aby odświeżyć dane
             await queryClient.invalidateQueries({ queryKey: ['fullProfile'] });
             await queryClient.invalidateQueries({ queryKey: ['profile'] });
         },
-        onError: () => toast.error('Wystąpił błąd podczas aktualizacji profilu.'),
+        onError: (error: Error) => {
+            console.error('Profile update error:', error);
+            toast.error('Wystąpił błąd podczas aktualizacji profilu.');
+        },
     });
 
     return (

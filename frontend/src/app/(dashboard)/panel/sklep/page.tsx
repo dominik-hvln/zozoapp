@@ -72,7 +72,7 @@ function ProductCard({ product }: { product: Product }) {
 
     return (
         <Card className="flex flex-col md:flex-row p-4">
-            <CardHeader className="p-0 w-full md:w-49 md:min-w-49">
+            <CardHeader className="p-0 w-full md:w-30 md:min-w-30">
                 <Image
                     src={product.image_url || AppleIcon}
                     alt={product.name}
