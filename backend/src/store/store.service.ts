@@ -86,7 +86,7 @@ export class StoreService {
                 client_reference_id: userId,
                 customer_email: user.email,
                 line_items: [{
-                    price: 'price_1RwJhZLpI3RKz2R39q16HoQU',
+                    price: 'price_1S1Ci143I93q19tr6Stycejq',
                     quantity: 1,
                 }],
                 success_url: successUrl,
@@ -137,8 +137,6 @@ export class StoreService {
 
     async createOneTimePaymentCheckoutSession(userId: string, checkoutDto: CreateCheckoutDto) {
         const { items, platform, couponCode, shippingMethodId, shippingAddress } = checkoutDto;
-
-        // Krok 1: Walidacja i przygotowanie danych (bez zmian)
         const user = await this.prisma.users.findUnique({ where: { id: userId } });
         if (!user || !user.stripe_customer_id) {
             throw new NotFoundException('Użytkownik lub jego dane płatności nie zostały znalezione.');
@@ -156,8 +154,6 @@ export class StoreService {
             where: { stripe_price_id: { in: priceIds } },
             select: { id: true, stripe_price_id: true, price: true }
         });
-
-        // Krok 2: Obliczenie finalnej kwoty zamówienia
         const subtotal = variantsInDb.reduce((acc, variant) => {
             const item = items.find(i => i.priceId === variant.stripe_price_id);
             return acc + (variant.price * (item?.quantity || 1));
@@ -179,13 +175,12 @@ export class StoreService {
         }
         const totalAmount = subtotal - discountAmount + shippingMethod.price;
 
-        // Krok 3: Utworzenie sesji płatności w Stripe
         const line_items = items.map(item => ({ price: item.priceId, quantity: item.quantity }));
         const successUrl = platform === 'mobile'
-            ? `zozoapp://payment-complete?status=success&session_id={CHECKOUT_SESSION_ID}`
+            ? `zozoapp://panel/zamowienie/{CHECKOUT_SESSION_ID}`
             : `${process.env.FRONTEND_URL}/panel/zamowienie/{CHECKOUT_SESSION_ID}`;
         const cancelUrl = platform === 'mobile'
-            ? `zozoapp://payment-complete?status=cancel`
+            ? `zozoapp://panel/koszyk?status=cancel`
             : `${process.env.FRONTEND_URL}/panel/koszyk?status=cancel`;
 
         const sessionPayload: Stripe.Checkout.SessionCreateParams = {
@@ -218,7 +213,7 @@ export class StoreService {
             data: {
                 user_id: userId,
                 shipping_address_id: newAddress.id,
-                shipping_method_id: shippingMethodId, // Zapisujemy ID metody dostawy
+                shipping_method_id: shippingMethodId,
                 status: 'PENDING',
                 total: totalAmount,
                 stripe_customer_id: user.stripe_customer_id,
