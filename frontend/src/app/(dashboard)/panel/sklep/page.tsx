@@ -66,6 +66,7 @@ function ProductCard({ product }: { product: Product }) {
             name: `${product.name} (${selectedVariant.quantity} szt.)`,
             price: selectedVariant.price,
             stripePriceId: selectedVariant.stripe_price_id,
+            image_url: product.image_url,
         });
         toast.success(`Dodano do koszyka: ${product.name} (${selectedVariant.quantity} szt.)`);
     }

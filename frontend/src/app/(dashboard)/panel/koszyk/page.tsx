@@ -244,7 +244,7 @@ export default function KoszykPage() {
                         {/* Tabela z produktami */}
                         <Card>
                             <CardHeader><CardTitle>Produkty w koszyku</CardTitle></CardHeader>
-                            <CardContent className="p-0">
+                            <CardContent className="px-6 py-0">
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
@@ -258,7 +258,7 @@ export default function KoszykPage() {
                                     <TableBody>
                                         {items.map((item) => (
                                             <TableRow key={item.id}>
-                                                <TableCell><Image src={productIcons[item.name] || LemonIcon} alt={item.name} width={64} height={64} /></TableCell>
+                                                <TableCell><Image src={item.image_url || LemonIcon} alt={item.name} width={64} height={64} className='p-2' /></TableCell>
                                                 <TableCell>{item.name}</TableCell>
                                                 <TableCell>
                                                     <div className="flex items-center gap-2">
@@ -304,7 +304,7 @@ export default function KoszykPage() {
                             <CardHeader><CardTitle>Adres Dostawy</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
+                                    <div className='grid gap-2'>
                                         <Label htmlFor="firstName">Imię</Label>
                                         <Input
                                             id="firstName"
@@ -326,7 +326,7 @@ export default function KoszykPage() {
                                             <p className="text-red-500 text-sm mt-1">{form.formState.errors.firstName.message}</p>
                                         )}
                                     </div>
-                                    <div>
+                                    <div className='grid gap-2'>
                                         <Label htmlFor="lastName">Nazwisko</Label>
                                         <Input
                                             id="lastName"
@@ -349,7 +349,7 @@ export default function KoszykPage() {
                                         )}
                                     </div>
                                 </div>
-                                <div>
+                                <div className='grid gap-2'>
                                     <Label htmlFor="street">Ulica i numer</Label>
                                     <Input
                                         id="street"
@@ -368,7 +368,7 @@ export default function KoszykPage() {
                                     )}
                                 </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
+                                    <div className='grid gap-2'>
                                         <Label htmlFor="postalCode">Kod pocztowy</Label>
                                         <Input
                                             id="postalCode"
@@ -404,7 +404,7 @@ export default function KoszykPage() {
                                             <p className="text-red-500 text-sm mt-1">{form.formState.errors.postalCode.message}</p>
                                         )}
                                     </div>
-                                    <div>
+                                    <div className='grid gap-2'>
                                         <Label htmlFor="city">Miasto</Label>
                                         <Input
                                             id="city"
@@ -427,7 +427,7 @@ export default function KoszykPage() {
                                         )}
                                     </div>
                                 </div>
-                                <div>
+                                <div className='grid gap-2'>
                                     <Label htmlFor="phoneNumber">Numer telefonu (opcjonalnie)</Label>
                                     <Input
                                         id="phoneNumber"
@@ -561,7 +561,7 @@ export default function KoszykPage() {
                                 />
                                 <Separator />
                                 <div className="flex justify-between font-bold text-xl"><span>Razem:</span><span>{(total / 100).toFixed(2)} zł</span></div>
-                                <Button onClick={() => form.handleSubmit(handleCheckout)()} disabled={items.length === 0 || checkoutMutation.isPending} className="w-full mt-4" size="lg">
+                                <Button onClick={() => form.handleSubmit(handleCheckout)()} disabled={items.length === 0 || checkoutMutation.isPending} className="w-full bg-orange-400 hover:bg-orange-500 rounded-[22px] py-3 px-4" size="lg">
                                     {checkoutMutation.isPending ? 'Przetwarzanie...' : 'Kupuję i płacę'}
                                 </Button>
                             </CardContent>

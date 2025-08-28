@@ -13,8 +13,8 @@ export class CartController {
     }
 
     @Post('items')
-    addItem(@Request() req, @Body() body: { productId: string; quantity: number }) {
-        return this.cartService.addItem(req.user.userId, body.productId, body.quantity);
+    addItem(@Request() req, @Body() body: { productId: string; quantity: number, image_url: string }) {
+        return this.cartService.addItem(req.user.userId, body.productId, body.quantity, body.image_url);
     }
 
     @Put('items/:itemId')

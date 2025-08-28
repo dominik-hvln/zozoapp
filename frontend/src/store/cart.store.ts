@@ -7,6 +7,7 @@ export interface CartItem {
     price: number;
     stripePriceId: string;
     quantity: number;
+    image_url?: string;
 }
 
 interface CartState {
