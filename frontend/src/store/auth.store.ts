@@ -18,8 +18,12 @@ interface AuthState {
     token: string | null;
     user: UserPayload | null;
     isInitialized: boolean; // Nowy stan do śledzenia inicjalizacji
+    refreshInterval: NodeJS.Timeout | null;
     initializeAuth: () => Promise<void>; // Nowa funkcja do wczytywania tokena
     setToken: (token: string) => void;
+    refreshToken: () => Promise<void>; // Nowa funkcja do odświeżania tokena
+    startTokenRefreshInterval: () => void; // Automatyczne odświeżanie
+    clearTokenRefreshInterval: () => void;
     logout: () => void;
 }
 
@@ -36,6 +40,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     token: null,
     user: null,
     isInitialized: false,
+    refreshInterval: null,
 
     // --- NOWA FUNKCJA DO INICJALIZACJI ---
     // Ta funkcja będzie wywoływana przy starcie aplikacji, aby wczytać token.
@@ -57,6 +62,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             const user = decodeToken(token);
             if (user) {
                 set({ token, user, isInitialized: true });
+                // Uruchom automatyczne odświeżanie tokena po wczytaniu z pamięci
+                get().startTokenRefreshInterval();
             } else {
                 // Jeśli token jest nieprawidłowy, czyścimy go
                 get().logout();
@@ -81,6 +88,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const user = decodeToken(token);
         set({ token, user });
 
+        // Uruchom automatyczne odświeżanie tokena
+        get().startTokenRefreshInterval();
+
         // Inicjalizuj powiadomienia push po zalogowaniu (tylko na urządzeniach mobilnych)
         if (Capacitor.isNativePlatform()) {
             console.log('[AUTH] Inicjalizacja powiadomień push po zalogowaniu...');
@@ -93,8 +103,63 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         }
     },
 
+    // --- NOWA FUNKCJA DO ODŚWIEŻANIA TOKENA ---
+    refreshToken: async () => {
+        const currentToken = get().token;
+        if (!currentToken) return;
+
+        try {
+            const { api } = await import('@/lib/api');
+            const response = await api.post('/auth/refresh');
+            const { access_token } = response.data;
+
+            // Zapisz nowy token bez uruchamiania ponownie intervalu
+            if (Capacitor.isNativePlatform()) {
+                await Preferences.set({ key: 'authToken', value: access_token });
+            } else {
+                const isProduction = process.env.NODE_ENV === 'production';
+                Cookies.set('access_token', access_token, { expires: 30, secure: isProduction });
+            }
+
+            const user = decodeToken(access_token);
+            set({ token: access_token, user });
+
+            console.log('[AUTH] Token został odświeżony automatycznie');
+        } catch (error) {
+            console.error('[AUTH] Błąd podczas odświeżania tokena:', error);
+            // Jeśli nie można odświeżyć tokena, wyloguj użytkownika
+            get().logout();
+        }
+    },
+
+    // --- NOWA FUNKCJA DO URUCHAMIANIA AUTOMATYCZNEGO ODŚWIEŻANIA ---
+    startTokenRefreshInterval: () => {
+        // Wyczyść poprzedni interval jeśli istnieje
+        get().clearTokenRefreshInterval();
+
+        // Ustaw nowy interval - odświeżaj token co 23 godziny (83% z 24h)
+        const interval = setInterval(() => {
+            get().refreshToken();
+        }, 23 * 60 * 60 * 1000); // 23 godziny w milisekundach
+
+        set({ refreshInterval: interval });
+        console.log('[AUTH] Automatyczne odświeżanie tokena zostało uruchomione');
+    },
+
+    // --- NOWA FUNKCJA DO CZYSZCZENIA INTERVALU ---
+    clearTokenRefreshInterval: () => {
+        const currentInterval = get().refreshInterval;
+        if (currentInterval) {
+            clearInterval(currentInterval);
+            set({ refreshInterval: null });
+        }
+    },
+
     // --- ZAKTUALIZOWANA FUNKCJA ---
     logout: async () => {
+        // Zatrzymaj automatyczne odświeżanie tokena
+        get().clearTokenRefreshInterval();
+
         if (Capacitor.isNativePlatform()) {
             // Aplikacja mobilna: usuń z trwałej pamięci
             await Preferences.remove({ key: 'authToken' });

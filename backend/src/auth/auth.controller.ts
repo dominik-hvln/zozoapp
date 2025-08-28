@@ -24,19 +24,19 @@ export class AuthController {
         return this.authService.getProfile(req.user.userId);
     }
 
-    @UseGuards(JwtAuthGuard)
-    @Post('refresh')
-    refreshSession(@Request() req) {
-        return this.authService.refreshSession(req.user.userId);
-    }
-
     @Post('forgot-password')
     forgotPassword(@Body('email') email: string) {
         return this.authService.forgotPassword(email);
     }
 
     @Post('reset-password')
-    resetPassword(@Body() body: { token: string; newPass: string }) {
-        return this.authService.resetPassword(body.token, body.newPass);
+    resetPassword(@Body() body: { token: string; password: string }) {
+        return this.authService.resetPassword(body.token, body.password);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('refresh')
+    async refresh(@Request() req) {
+        return this.authService.refreshSession(req.user.userId);
     }
 }
