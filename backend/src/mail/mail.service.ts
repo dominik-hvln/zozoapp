@@ -16,11 +16,13 @@ export class MailService {
                 to: parentEmail,
                 subject: `Ważny alert: Ktoś zeskanował tatuaż Twojego dziecka ${childName}!`,
                 html: `
-          <h1>Cześć ${parentName},</h1>
-          <p>Mamy ważną informację! Ktoś właśnie zeskanował tatuaż przypisany do <strong>${childName}</strong>.</p>
-          <p>Otrzymasz osobne powiadomienie, jeśli znalazca udostępni swoją lokalizację.</p>
+          <h1>Drogi Rodzicu,</h1>
+          <p>ktoś właśnie zeskanował tatuaż przypisany do <strong>${childName}</strong>.</p>
+          <p>W aplikacji możesz natychmiast sprawdzić dokładną lokalizację skanu.</p>
+          <p>Osoba, która zeskanowała tatuaż, powinna wkrótce skontaktować się z Tobą.</p>
+          <p>Jeśli jednak nie otrzymasz telefonu w krótkim czasie, zalecamy podjęcie dodatkowych kroków i kontakt z odpowiednimi służbami.</p>
           <p>Pozdrawiamy,</p>
-          <p><strong>Zespół ZozoApp</strong></p>
+          <p><strong>Twój zespół Zozo – NiezgubDziecka.pl</strong></p>
         `,
             });
             console.log('Wysłano e-mail z powiadomieniem.');
