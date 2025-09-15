@@ -30,8 +30,8 @@ export class AuthController {
     }
 
     @Post('reset-password')
-    resetPassword(@Body() body: { token: string; password: string }) {
-        return this.authService.resetPassword(body.token, body.password);
+    resetPassword(@Body() body: { token: string; newPass: string }) {
+        return this.authService.resetPassword(body.token, body.newPass);
     }
 
     @UseGuards(JwtAuthGuard)
