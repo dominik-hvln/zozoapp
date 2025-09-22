@@ -86,4 +86,27 @@ export class ProfileService {
             data: { password_hash: newHashedPassword },
         });
     }
+
+    async deleteAccount(userId: string, passwordConfirmation: string) {
+        const user = await this.prisma.users.findUnique({ where: { id: userId } });
+        if (!user) {
+            throw new NotFoundException('Użytkownik nie istnieje.');
+        }
+
+        const isPasswordMatching = await bcrypt.compare(passwordConfirmation, user.password_hash);
+        if (!isPasswordMatching) {
+            throw new UnauthorizedException('Hasło jest nieprawidłowe. Nie można usunąć konta.');
+        }
+
+        await this.notificationsService.create({
+            user_id: userId,
+            type: 'ACCOUNT_DELETION',
+            title: 'Konto zostało usunięte',
+            message: 'Twoje konto zostało trwale usunięte z naszego systemu.',
+        });
+
+        return this.prisma.users.delete({
+            where: { id: userId },
+        });
+    }
 }
