@@ -9,7 +9,7 @@
     "lint": "next lint",
     "setup:ios": "npm run build && npx cap add ios && node scripts/configure-ios.mjs && npx cap sync ios && cd ios/App && pod install && cd ../.. && npx cap open ios",
     "config:ios": "node scripts/configure-ios.mjs && npx cap sync ios && cd ios/App && pod install && cd ../.."
-},
+  },
   "dependencies": {
     "@capacitor/android": "^7.4.3",
     "@capacitor/app": "^7.0.2",
@@ -21,6 +21,7 @@
     "@capacitor/ios": "^7.4.3",
     "@capacitor/preferences": "^7.0.2",
     "@capacitor/push-notifications": "^7.0.2",
+    "@capgo/capacitor-native-biometric": "^7.1.13",
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-alert-dialog": "^1.1.14",
     "@radix-ui/react-avatar": "^1.1.10",
