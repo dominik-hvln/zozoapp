@@ -5,9 +5,7 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-
 import { Capacitor } from '@capacitor/core';
-import { saveCredentials, autofillWithBiometrics, checkBiometrics, humanizeBiometricError, getBiometricErrorCode, } from '@/lib/biometric-credentials';
 
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
@@ -16,11 +14,18 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { toast } from 'sonner';
 
-// UI – używam Twoich komponentów
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+
+import {
+    saveCredentials,
+    autofillWithBiometrics,
+    checkBiometrics,
+    humanizeBiometricError,
+    getBiometricErrorCode,
+} from '@/lib/biometric-credentials';
 
 const loginSchema = z.object({
     email: z.string().email('Nieprawidłowy adres email'),
@@ -28,7 +33,7 @@ const loginSchema = z.object({
 });
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-export function LoginForm() {
+export default function LoginForm() {
     const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } =
         useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
 
@@ -47,18 +52,14 @@ export function LoginForm() {
         })();
     }, [isNativeMobile]);
 
+    // === IDENTYCZNY REQUEST JAK WCZEŚNIEJ ===
     const onSubmit = async (data: LoginFormValues) => {
         try {
-            // (opcjonalne) kanał – nie jest wymagany do autofillu, ale nie przeszkadza
-            const res = await api.post('/auth/login', {
-                email: data.email,
-                pass: data.password,
-                channel: isNativeMobile ? 'mobile' : 'web',
-            });
-            const { access_token } = res.data;
+            const response = await api.post('/auth/login', data);
+            const { access_token } = response.data;
             setToken(access_token);
 
-            // Krok 2: zapytaj o zapis danych (tylko mobilnie)
+            // Krok 2: zapytaj o zapis danych (tylko mobilnie, nie zmienia requestu)
             if (isNativeMobile && biometricAvailable) {
                 if (window.confirm('Zapisać dane i włączać autouzupełnianie po biometrii?')) {
                     await saveCredentials(data.email, data.password);
@@ -66,10 +67,10 @@ export function LoginForm() {
                 }
             }
 
-            toast.success('Zalogowano.');
+            toast.success('Logowanie pomyślne!');
             router.push('/panel');
         } catch {
-            toast.error('Nieprawidłowy email lub hasło.');
+            toast.error('Błąd logowania:', { description: 'Nieprawidłowy email lub hasło.' });
         }
     };
 
@@ -83,14 +84,14 @@ export function LoginForm() {
             setValue('email', creds.email, { shouldValidate: true });
             setValue('password', creds.password, { shouldValidate: true });
             toast.success('Uzupełniono zapisane dane.');
-        } catch (err: unknown) {                // <- zamiast (e: any)
+        } catch (err: unknown) {
             const code = getBiometricErrorCode(err);
             toast.error(humanizeBiometricError(code));
         }
     };
 
     return (
-        <Card className="w-full max-w-lg px-16 z-999">
+        <Card className="w-full max-w-lg px-16">
             <CardHeader>
                 <CardTitle className="text-center text-[26px]">Zaloguj się!</CardTitle>
             </CardHeader>
@@ -102,7 +103,7 @@ export function LoginForm() {
                             id="email"
                             type="email"
                             className="h-[50px]"
-                            autoComplete="username"
+                            autoComplete="username"   // web autofill
                             inputMode="email"
                             autoCapitalize="off"
                             autoCorrect="off"
@@ -119,7 +120,7 @@ export function LoginForm() {
                             id="password"
                             type="password"
                             className="h-[50px]"
-                            autoComplete="current-password"
+                            autoComplete="current-password" // web autofill
                             autoCapitalize="off"
                             autoCorrect="off"
                             spellCheck={false}

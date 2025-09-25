@@ -1,6 +1,6 @@
 import { NativeBiometric, BiometryType } from '@capgo/capacitor-native-biometric';
 
-const SERVER = 'com.twoja.domena.app';
+const SERVER = 'pl.appity.zozoapp'; // stały identyfikator Keychain/Keystore
 
 type BiometricCheck = {
     available: boolean;
@@ -8,7 +8,6 @@ type BiometricCheck = {
     errorCode?: number;
 };
 
-// NEW: bezpieczny wyciągacz kodu błędu
 export function getBiometricErrorCode(err: unknown): number | undefined {
     if (typeof err === 'object' && err !== null) {
         const rec = err as Record<string, unknown>;
@@ -27,14 +26,20 @@ export async function checkBiometrics(useFallback = true): Promise<BiometricChec
     }
 }
 
+/** Krok 2: zapis po udanym logowaniu (bez verifyIdentity) */
 export async function saveCredentials(email: string, password: string): Promise<boolean> {
     const { available } = await checkBiometrics(true);
     if (!available) return false;
 
-    await NativeBiometric.setCredentials({ username: email, password, server: SERVER });
+    await NativeBiometric.setCredentials({
+        username: email,
+        password,
+        server: SERVER,
+    });
     return true;
 }
 
+/** Krok 3: autouzupełnienie po biometrii (z ewentualnym fallbackiem na kod urządzenia) */
 export async function autofillWithBiometrics(): Promise<{ email: string; password: string } | null> {
     const { available } = await checkBiometrics(true);
     if (!available) return null;
@@ -65,11 +70,11 @@ export async function deleteSavedCredentials(): Promise<void> {
 export function humanizeBiometricError(code?: number): string {
     switch (code) {
         case 1: return 'Biometria niedostępna na tym urządzeniu.';
-        case 3: return 'Brak skonfigurowanej biometrii.';
+        case 3: return 'Na urządzeniu nie skonfigurowano biometrii.';
         case 4: return 'Zbyt wiele prób. Spróbuj ponownie za chwilę.';
         case 10: return 'Uwierzytelnianie nie powiodło się.';
         case 14: return 'Brak kodu urządzenia/hasła systemowego.';
-        case 16: return 'Anulowano przez użytkownika.';
+        case 16: return 'Operacja anulowana przez użytkownika.';
         case 17: return 'Wybrano metodę awaryjną (fallback).';
         default: return 'Nie udało się potwierdzić tożsamości.';
     }
