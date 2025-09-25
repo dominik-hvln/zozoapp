@@ -54,7 +54,6 @@ export default function LoginForm() {
         })();
     }, [isNativeMobile]);
 
-    // === IDENTYCZNY REQUEST JAK WCZEŚNIEJ ===
     const onSubmit = async (data: LoginFormValues) => {
         try {
             const response = await api.post('/auth/login', data);
