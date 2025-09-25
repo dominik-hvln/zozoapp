@@ -90,7 +90,7 @@ export function LoginForm() {
     };
 
     return (
-        <Card className="w-full max-w-lg px-16">
+        <Card className="w-full max-w-lg px-16 z-999">
             <CardHeader>
                 <CardTitle className="text-center text-[26px]">Zaloguj się!</CardTitle>
             </CardHeader>
