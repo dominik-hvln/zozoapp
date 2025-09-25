@@ -25,6 +25,8 @@ import {
     checkBiometrics,
     humanizeBiometricError,
     getBiometricErrorCode,
+    shouldPromptToSave,      // NEW
+    markPromptDeclined,      // NEW
 } from '@/lib/biometric-credentials';
 
 const loginSchema = z.object({
@@ -61,9 +63,15 @@ export default function LoginForm() {
 
             // Krok 2: zapytaj o zapis danych (tylko mobilnie, nie zmienia requestu)
             if (isNativeMobile && biometricAvailable) {
-                if (window.confirm('Zapisać dane i włączać autouzupełnianie po biometrii?')) {
-                    await saveCredentials(data.email, data.password);
-                    toast.success('Dane zapisane w sejfie urządzenia.');
+                // pytamy tylko gdy ma to sens
+                if (await shouldPromptToSave(data.email)) {
+                    const wantsSave = window.confirm('Zapisać dane i włączać autouzupełnianie po biometrii?');
+                    if (wantsSave) {
+                        await saveCredentials(data.email, data.password);
+                        toast.success('Dane zapisane w sejfie urządzenia.');
+                    } else {
+                        await markPromptDeclined();
+                    }
                 }
             }
 
