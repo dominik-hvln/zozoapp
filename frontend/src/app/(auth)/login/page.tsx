@@ -1,4 +1,4 @@
-import { LoginForm } from '@/components/shared/LoginForm';
+import LoginForm from '@/components/shared/LoginForm';
 import Image from 'next/image';
 import {Card} from '@/components/ui/card';
 
