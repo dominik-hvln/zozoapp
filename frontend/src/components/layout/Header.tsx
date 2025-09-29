@@ -76,7 +76,7 @@ export function Header() {
     }).format(new Date());
 
     return (
-        <header className="text-white sticky top-4 z-40 px-4">
+        <header className="text-white sticky top-8 md:top-4 z-40 px-4">
             <div className="container mx-auto bg-[#466ec6] flex h-16 lg:h-20 items-center justify-between px-4 rounded-[20px]">
                 <div className="flex items-center gap-6">
                     <Link href="/panel">

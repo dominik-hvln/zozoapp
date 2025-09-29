@@ -15,8 +15,6 @@ import { PartyPopper, XCircle, Loader2 } from 'lucide-react';
 import { App } from '@capacitor/app';
 import { cn } from '@/lib/utils';
 
-
-// --- FUNKCJE API (bez zmian) ---
 const getFullProfile = async () => (await api.get('/auth/profile')).data;
 
 function PaymentStatusComponent() {
@@ -77,8 +75,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const { token, setToken, initializeAuth, isInitialized } = useAuthStore();
     const router = useRouter();
     const queryClient = useQueryClient();
-    // --- NOWY STAN ---
-    // Będzie przechowywał informację, czy aplikacja działa w trybie natywnym.
     const [isNative, setIsNative] = useState(false);
 
     useSocket();
@@ -117,8 +113,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
     }, [token, router, isInitialized]);
 
-    // Powiadomienia push będą inicjalizowane po zalogowaniu w auth.store
-
     useEffect(() => {
         if (Capacitor.isNativePlatform()) {
             const listenerPromise = App.addListener('appUrlOpen', () => {
@@ -150,11 +144,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
         <>
             <PaymentStatus />
-            {/* --- POPRAWKA TUTAJ --- */}
-            {/* Używamy funkcji `cn` do warunkowego dodania klasy `pt-safe`. */}
             <div className={cn("flex min-h-screen w-full flex-col", { "pt-safe": isNative })}>
                 <Header />
-                <main className="flex-1 p-4 lg:p-8 relative">
+                <main className="flex-1 pt-12 md:pt-4 p-4 lg:p-8 relative">
                     {isAccountBlocked ? (
                         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
                             <div className="text-center p-6 border rounded-lg bg-white shadow-xl max-w-sm">

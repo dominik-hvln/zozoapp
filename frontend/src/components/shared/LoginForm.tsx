@@ -60,9 +60,7 @@ export default function LoginForm() {
             const { access_token } = response.data;
             setToken(access_token);
 
-            // Krok 2: zapytaj o zapis danych (tylko mobilnie, nie zmienia requestu)
             if (isNativeMobile && biometricAvailable) {
-                // pytamy tylko gdy ma to sens
                 if (await shouldPromptToSave(data.email)) {
                     const wantsSave = window.confirm('Zapisać dane i włączać autouzupełnianie po biometrii?');
                     if (wantsSave) {
