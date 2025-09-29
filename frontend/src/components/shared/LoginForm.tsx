@@ -139,17 +139,18 @@ export default function LoginForm() {
                         <Link href="/forgot-password" passHref>
                             <Button variant="link" className="px-0 pt-0 text-sm h-auto">Nie pamiętasz hasła?</Button>
                         </Link>
-
-                        {biometricAvailable && (
-                            <Button type="button" variant="secondary" onClick={onBiometricAutofill} className="text-sm h-9">
-                                Autouzupełnij biometrią
-                            </Button>
-                        )}
                     </div>
 
                     <Button type="submit" disabled={isSubmitting} className="w-full h-[50px]">
                         {isSubmitting ? 'Logowanie...' : 'Zaloguj się'}
                     </Button>
+                    <div className="mt-6 border-t pt-6">
+                        {biometricAvailable && (
+                            <Button type="button" variant="secondary" onClick={onBiometricAutofill} className="text-sm w-full h-[50px]">
+                                Autouzupełnij biometrią
+                            </Button>
+                        )}
+                    </div>
                 </form>
 
                 <div className="text-center">

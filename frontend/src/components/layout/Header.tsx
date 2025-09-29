@@ -10,6 +10,8 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/co
 import { Home, Users, ShoppingCart, User, Settings, Menu, Bell, LogOut } from 'lucide-react';
 import { useCartStore } from '@/store/cart.store';
 import { useAuthStore } from '@/store/auth.store';
+import { Capacitor } from '@capacitor/core';
+import { cn } from '@/lib/utils';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -61,6 +63,8 @@ export function Header() {
     const { user, logout } = useAuthStore();
     const itemsInCart = useCartStore((state) => state.items.length);
     const { data: profile, isLoading } = useQuery({ queryKey: ['profile'], queryFn: getProfile });
+    const platform = Capacitor.getPlatform();
+    const isNativeMobile = platform === 'ios' || platform === 'android';
 
     const { data: unreadCount } = useQuery({
         queryKey: ['unreadNotificationsCount'],
@@ -76,7 +80,7 @@ export function Header() {
     }).format(new Date());
 
     return (
-        <header className="text-white sticky top-8 md:top-4 z-40 px-4">
+        <header className={cn("text-white sticky top-4 z-40 px-4", {"top-12" : isNativeMobile})}>
             <div className="container mx-auto bg-[#466ec6] flex h-16 lg:h-20 items-center justify-between px-4 rounded-[20px]">
                 <div className="flex items-center gap-6">
                     <Link href="/panel">
