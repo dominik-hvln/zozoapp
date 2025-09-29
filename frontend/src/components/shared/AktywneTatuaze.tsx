@@ -11,7 +11,10 @@ interface Child { name: string; }
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
-interface TattooInstance { unique_code: string; }
+interface TattooInstance {
+    unique_code: string;
+    expires_at: string | null;
+}
 interface Child { name: string; }
 interface Assignment {
     id: string;
@@ -55,6 +58,11 @@ export function AktywneTatuaze() {
                                     <p className="text-xs text-muted-foreground">
                                         Aktywowano: {format(new Date(assignment.created_at), 'd MMMM yyyy', { locale: pl })}
                                     </p>
+                                    {assignment.tattoo_instances.expires_at && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Wygasa: {format(new Date(assignment.tattoo_instances.expires_at), 'd MMMM yyyy', { locale: pl })}
+                                        </p>
+                                    )}
                                 </div>
                                 <Badge variant={assignment.is_active ? 'secondary' : 'destructive'}>
                                     {assignment.is_active ? 'Aktywny' : 'Wygasł'}

@@ -50,7 +50,12 @@ export class TattoosService {
             },
             include: {
                 children: true,
-                tattoo_instances: true,
+                tattoo_instances: {
+                    select: {
+                        unique_code: true,
+                        expires_at: true,
+                    }
+                },
             },
             orderBy: {
                 created_at: 'desc',

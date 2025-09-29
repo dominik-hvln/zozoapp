@@ -21,9 +21,11 @@ import { CartModule } from './cart/cart.module';
 import { OrdersModule } from './orders/orders.module';
 import { UploadsModule } from './uploads/uploads.module';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ScheduleModule } from '@nestjs/schedule';
+import { TasksModule } from './tasks/tasks.module';
 
 @Module({
-  imports: [ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule, PrismaModule, ChildrenModule, TattoosModule, ScansModule, MailModule, AdminModule, StoreModule, DashboardModule, ProfileModule, WebhooksModule, EventsModule, CartModule, OrdersModule, UploadsModule, NotificationsModule],
+  imports: [ScheduleModule.forRoot(), ConfigModule.forRoot({ isGlobal: true }), UsersModule, AuthModule, PrismaModule, ChildrenModule, TattoosModule, ScansModule, MailModule, AdminModule, StoreModule, DashboardModule, ProfileModule, WebhooksModule, EventsModule, CartModule, OrdersModule, UploadsModule, NotificationsModule, TasksModule],
   controllers: [AppController, ChildrenController],
   providers: [AppService, ChildrenService],
 })
