@@ -10,6 +10,7 @@ import { pl } from 'date-fns/locale';
 import Image from 'next/image';
 
 // Import komponentów
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -30,6 +31,7 @@ interface Child {
 }
 const getChildDetails = async (childId: string): Promise<Child> => (await api.get(`/children/${childId}`)).data;
 const updateChild = async ({ id, data }: { id: string, data: Partial<Child> }) => (await api.put(`/children/${id}`, data)).data;
+const deleteChild = async (childId: string) => (await api.delete(`/children/${childId}`)).data;
 const uploadAvatar = async (data: FormData) => (await api.post('/uploads/avatar', data, {
     headers: { 'Content-Type': 'multipart/form-data' }
 })).data;
@@ -87,6 +89,16 @@ export default function DzieckoEditFormPage() {
             queryClient.invalidateQueries({ queryKey: ['childDetails', childId] });
         },
         onError: () => toast.error('Nie udało się wgrać awatara. Sprawdź rozmiar i format pliku.')
+    });
+
+    const deleteMutation = useMutation({
+        mutationFn: () => deleteChild(childId),
+        onSuccess: () => {
+            toast.success('Dziecko zostało pomyślnie usunięte.');
+            queryClient.invalidateQueries({ queryKey: ['children'] });
+            router.push('/panel/dzieci');
+        },
+        onError: () => toast.error('Wystąpił błąd podczas usuwania dziecka.'),
     });
 
     const handleFormSubmit = (e: React.FormEvent) => { e.preventDefault(); updateMutation.mutate(formData); };
@@ -165,6 +177,27 @@ export default function DzieckoEditFormPage() {
                                     {updateMutation.isPending ? "Zapisywanie..." : "Zapisz zmiany"}
                                 </Button>
                             </form>
+                            <div className="mt-6 border-t pt-6">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" className="w-full">Usuń dziecko</Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Czy na pewno chcesz usunąć to dziecko?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Ta akcja jest nieodwracalna. Spowoduje to trwałe usunięcie profilu dziecka i wszystkich powiązanych z nim danych, w tym aktywnych tatuaży.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Anuluj</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => deleteMutation.mutate()} disabled={deleteMutation.isPending}>
+                                                {deleteMutation.isPending ? "Usuwanie..." : "Tak, usuń"}
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
                         </CardContent>
                     </Card>
                 </div>

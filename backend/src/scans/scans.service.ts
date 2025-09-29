@@ -23,16 +23,40 @@ export class ScansService {
     }
 
     async processScan(uniqueCode: string, ip: string, userAgent: string) {
-        const assignment = await this.prisma.assignments.findFirst({
-            where: {
-                is_active: true,
-                tattoo_instances: { unique_code: uniqueCode, status: 'active' },
-            },
-            include: { children: true, users: true },
+        const tattoo = await this.prisma.tattoo_instances.findUnique({
+            where: { unique_code: uniqueCode },
+            include: { assignments: { include: { children: true, users: true } } },
         });
 
+        if (!tattoo) {
+            throw new NotFoundException('Tatuaż o podanym kodzie nie istnieje.');
+        }
+
+        if (tattoo.status === 'inactive') {
+            throw new NotFoundException('Tatuaż wygasł.');
+        }
+
+        if (tattoo.status === 'new') {
+            throw new NotFoundException('Tatuaż nie został jeszcze aktywowany.');
+        }
+
+        const assignment = tattoo.assignments[0];
         if (!assignment) {
-            throw new NotFoundException('Nie znaleziono aktywnego tatuażu dla tego kodu.');
+             throw new NotFoundException('Nie znaleziono przypisania dla tego tatuażu.');
+        }
+
+        if (tattoo.expires_at && new Date(tattoo.expires_at) < new Date()) {
+            await this.prisma.$transaction([
+                this.prisma.tattoo_instances.update({
+                    where: { id: tattoo.id },
+                    data: { status: 'inactive' },
+                }),
+                this.prisma.assignments.update({
+                    where: { id: assignment.id },
+                    data: { is_active: false },
+                })
+            ]);
+            throw new NotFoundException('Tatuaż wygasł.');
         }
 
         const tenSecondsAgo = new Date(Date.now() - 10000); // 10 sekund temu

@@ -8,14 +8,19 @@ import { Sticker } from 'lucide-react';
 // Definicja typów
 interface TattooInstance { unique_code: string; }
 interface Child { name: string; }
+import { format } from 'date-fns';
+import { pl } from 'date-fns/locale';
+
+interface TattooInstance { unique_code: string; }
+interface Child { name: string; }
 interface Assignment {
     id: string;
     created_at: string;
+    is_active: boolean;
     children: Child;
     tattoo_instances: TattooInstance;
 }
 
-// Funkcja do pobierania danych
 const getActiveTattoos = async (): Promise<Assignment[]> => {
     const response = await api.get('/tattoos');
     return response.data;
@@ -32,7 +37,7 @@ export function AktywneTatuaze() {
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                     <Sticker className="h-5 w-5" />
-                    Twoje Aktywne Tatuaże
+                    Twoje Tatuaże
                 </CardTitle>
             </CardHeader>
             <CardContent>
@@ -44,9 +49,16 @@ export function AktywneTatuaze() {
                             <li key={assignment.id} className="flex items-center justify-between p-3 border rounded-lg">
                                 <div>
                                     <p className="font-mono text-sm text-gray-800">{assignment.tattoo_instances.unique_code}</p>
-                                    <p className="text-xs text-muted-foreground">Przypisano do: <span className="font-semibold">{assignment.children.name}</span></p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Przypisano do: <span className="font-semibold">{assignment.children.name}</span>
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Aktywowano: {format(new Date(assignment.created_at), 'd MMMM yyyy', { locale: pl })}
+                                    </p>
                                 </div>
-                                <Badge variant="secondary">Aktywny</Badge>
+                                <Badge variant={assignment.is_active ? 'secondary' : 'destructive'}>
+                                    {assignment.is_active ? 'Aktywny' : 'Wygasł'}
+                                </Badge>
                             </li>
                         ))}
                     </ul>

@@ -19,9 +19,15 @@ export class TattoosService {
         }
 
         return this.prisma.$transaction(async (tx) => {
+            const expiresAt = new Date();
+            expiresAt.setDate(expiresAt.getDate() + 7);
+
             const updatedTattoo = await tx.tattoo_instances.update({
                 where: { id: tattoo.id },
-                data: { status: 'active' },
+                data: {
+                    status: 'active',
+                    expires_at: expiresAt,
+                },
             });
 
             const assignment = await tx.assignments.create({
@@ -41,7 +47,6 @@ export class TattoosService {
         return this.prisma.assignments.findMany({
             where: {
                 user_id: userId,
-                is_active: true,
             },
             include: {
                 children: true,
