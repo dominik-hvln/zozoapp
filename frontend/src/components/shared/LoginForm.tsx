@@ -144,7 +144,7 @@ export default function LoginForm() {
                     <Button type="submit" disabled={isSubmitting} className="w-full h-[50px]">
                         {isSubmitting ? 'Logowanie...' : 'Zaloguj się'}
                     </Button>
-                    <div className="mt-6 border-t pt-6">
+                    <div className="mt-2 border-t pt-6">
                         {biometricAvailable && (
                             <Button type="button" variant="secondary" onClick={onBiometricAutofill} className="text-sm w-full h-[50px]">
                                 Autouzupełnij biometrią
