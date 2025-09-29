@@ -67,7 +67,7 @@ export default function PowiadomieniaPage() {
                     {isLoading && <p>Ładowanie...</p>}
                     {unreadNotifications.length > 0 ? (
                         unreadNotifications.map(notification => (
-                            <div key={notification.id} className="flex items-start gap-4 p-4 bg-primary/5 rounded-lg">
+                            <div key={notification.id} className="flex items-start gap-4 p-4 bg-primary/5 rounded-lg flex-wrap">
                                 <div className="bg-primary/10 p-2 rounded-full">
                                     <BellRing className="h-5 w-5 text-primary" />
                                 </div>
