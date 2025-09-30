@@ -5,8 +5,6 @@ import { api } from '@/lib/api';
 import { useState, useRef, useEffect } from 'react';
 import { toast } from 'sonner';
 import Image from 'next/image';
-
-// Import komponentów UI
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +20,6 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
-// --- TYPY I FUNKCJE API ---
 interface Variant { id: string; quantity: number; price: number; stripe_price_id: string; }
 interface Category { id: string; name: string; }
 interface Product {
@@ -50,27 +47,22 @@ const deleteVariant = async (variantId: string) => (await api.delete(`/admin/pro
 const getCategories = async (): Promise<Category[]> => (await api.get('/admin/categories')).data;
 const createCategory = async (name: string) => (await api.post('/admin/categories', { name })).data;
 
-// --- GŁÓWNY KOMPONENT ---
 export default function AdminProductsPage() {
     const [isProductDialogOpen, setIsProductDialogOpen] = useState(false);
     const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [editingVariant, setEditingVariant] = useState<Variant | null>(null);
     const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-
     const [productForm, setProductForm] = useState({ name: '', description: '', categoryIds: [] as string[] });
     const [editProductForm, setEditProductForm] = useState({ name: '', description: '', isActive: true, categoryIds: [] as string[] });
     const [productImageFile, setProductImageFile] = useState<File | null>(null);
     const [variantForm, setVariantForm] = useState({ quantity: 0, price: 0.00 });
     const [newCategoryName, setNewCategoryName] = useState('');
-
     const fileInputRef = useRef<HTMLInputElement>(null);
     const queryClient = useQueryClient();
-
     const { data: products, isLoading } = useQuery({ queryKey: ['admin-products'], queryFn: getProducts });
     const { data: categories } = useQuery({ queryKey: ['admin-categories'], queryFn: getCategories });
 
-    // --- MUTACJE Z ROZBUDOWANĄ OBSŁUGĄ BŁĘDÓW ---
     const imageMutation = useMutation({ mutationFn: uploadProductImage, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Zdjęcie zaktualizowane!'); }, onError: (error) => { console.error(error); toast.error('Błąd wgrywania zdjęcia.'); } });
     const productMutation = useMutation({ mutationFn: createProduct, onSuccess: async (newProduct) => { if (productImageFile) { await imageMutation.mutateAsync({ productId: newProduct.id, file: productImageFile }); } queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Produkt dodany!'); setIsProductDialogOpen(false); setProductForm({ name: '', description: '', categoryIds: [] }); setProductImageFile(null); }, onError: (error) => { console.error(error); toast.error('Błąd dodawania produktu.'); } });
     const productUpdateMutation = useMutation({ mutationFn: updateProduct, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Produkt zaktualizowany!'); setIsEditDialogOpen(false); }, onError: (error) => { console.error(error); toast.error('Błąd aktualizacji produktu.'); } });
@@ -80,7 +72,6 @@ export default function AdminProductsPage() {
     const variantDeleteMutation = useMutation({ mutationFn: deleteVariant, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-products'] }); toast.success('Wariant usunięty!'); setEditingVariant(null); }, onError: (error) => { console.error(error); toast.error('Błąd usuwania wariantu.'); } });
     const categoryMutation = useMutation({ mutationFn: createCategory, onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['admin-categories'] }); toast.success('Kategoria dodana!'); setNewCategoryName(''); }, onError: (error) => { console.error(error); toast.error('Błąd dodawania kategorii.'); } });
 
-    // --- HANDLERY ---
     const handleProductSubmit = (e: React.FormEvent) => { e.preventDefault(); productMutation.mutate(productForm); };
     const handleVariantSubmit = (e: React.FormEvent) => { e.preventDefault(); if (!selectedProduct) return; variantMutation.mutate({ productId: selectedProduct.id, ...variantForm, price: Math.round(variantForm.price * 100) }); };
     const handleCategorySubmit = (e: React.FormEvent) => { e.preventDefault(); categoryMutation.mutate(newCategoryName); };
@@ -295,8 +286,6 @@ export default function AdminProductsPage() {
     );
 }
 
-// --- NOWY KOMPONENT POMOCNICZY ---
-// Wydzielono logikę wyboru kategorii do osobnego komponentu dla czystości kodu.
 function CategorySelector({ allCategories, selectedIds, onSelectionChange }: { allCategories: Category[], selectedIds: string[], onSelectionChange: (ids: string[]) => void }) {
     return (
         <Popover>

@@ -8,7 +8,6 @@ import { StaticImageData } from 'next/image';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { AxiosError } from 'axios';
-
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { useForm } from 'react-hook-form';
@@ -23,11 +22,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Trash2 } from 'lucide-react';
 import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
-
-// Import komponentu do wyboru dostawy
 import { ShippingSelector } from '@/components/cart/ShippingSelector';
 
-// --- SCHEMAT WALIDACJI ADRESU ---
 const shippingAddressSchema = z.object({
     firstName: z.string()
         .min(2, 'Imię musi mieć minimum 2 znaki')
@@ -62,7 +58,6 @@ const shippingAddressSchema = z.object({
             .refine(val => {
                 if (!val || val.trim() === '') return true;
                 const digitsOnly = val.replace(/\D/g, '');
-                // Sprawdź czy numer zaczyna się od poprawnych cyfr dla Polski
                 if (digitsOnly.startsWith('48')) {
                     return digitsOnly.length === 11; // +48 + 9 cyfr
                 } else if (!digitsOnly.startsWith('48')) {
@@ -73,11 +68,9 @@ const shippingAddressSchema = z.object({
         ),
 });
 
-// --- TYPY ---
 type AppliedDiscount = { code: string; discount: { type: 'PERCENTAGE' | 'FIXED_AMOUNT'; value: number } };
 type ShippingAddress = z.infer<typeof shippingAddressSchema>;
 
-// Mapowanie ikon produktów
 const productIcons: { [key: string]: StaticImageData } = {
     'Apple': AppleIcon,
     'Lemon': LemonIcon,
@@ -93,7 +86,6 @@ export default function KoszykPage() {
         price: number;
     } | null>(null);
 
-    // --- FORMULARZ Z WALIDACJĄ ---
     const form = useForm<ShippingAddress>({
         resolver: zodResolver(shippingAddressSchema),
         defaultValues: {
@@ -106,7 +98,6 @@ export default function KoszykPage() {
         }
     });
 
-    // Obliczenia sum, zniżek i kosztów
     const subtotal = useMemo(() => items.reduce((acc, item) => acc + (item.price * item.quantity), 0), [items]);
     const shippingCost = selectedShipping?.price ?? 0;
     const discountAmount = useMemo(() => {
@@ -119,13 +110,12 @@ export default function KoszykPage() {
     }, [appliedDiscount, subtotal]);
     const total = subtotal + shippingCost - discountAmount;
 
-    // Mutacja do tworzenia sesji płatności
     const checkoutMutation = useMutation({
         mutationFn: (data: {
             items: { priceId: string, quantity: number }[],
             couponCode?: string,
             shippingMethodId: string,
-            shippingAddress: ShippingAddress // <-- Dodany adres
+            shippingAddress: ShippingAddress
         }) => {
             const platform = Capacitor.isNativePlatform() ? 'mobile' : 'web';
             return api.post('/store/checkout/payment', { ...data, platform });
@@ -145,7 +135,6 @@ export default function KoszykPage() {
         },
     });
 
-    // Mutacja dla kodu promocyjnego
     const promoMutation = useMutation({
         mutationFn: (code: string) => {
             const trimmedCode = code.trim().toUpperCase();
@@ -162,7 +151,7 @@ export default function KoszykPage() {
         },
         onSuccess: (response) => {
             setAppliedDiscount(response.data);
-            setPromoCode(''); // Wyczyść pole po pomyślnym zastosowaniu
+            setPromoCode('');
             toast.success(`Kod rabatowy "${response.data.code}" został pomyślnie zastosowany!`);
         },
         onError: (error: unknown) => {
@@ -198,18 +187,14 @@ export default function KoszykPage() {
     };
 
     const handleCheckout = (data: ShippingAddress) => {
-        // Walidacja podstawowa
         if (items.length === 0) {
             toast.error('Koszyk jest pusty');
             return;
         }
-
         if (!selectedShipping) {
             toast.error('Wybierz metodę dostawy');
             return;
         }
-
-        // Walidacja ilości produktów
         const invalidItems = items.filter(item => item.quantity <= 0 || item.quantity > 999);
         if (invalidItems.length > 0) {
             toast.error('Sprawdź ilości produktów w koszyku');
@@ -241,7 +226,6 @@ export default function KoszykPage() {
             ) : (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-2 space-y-8">
-                        {/* Tabela z produktami */}
                         <Card>
                             <CardHeader><CardTitle>Produkty w koszyku</CardTitle></CardHeader>
                             <CardContent className="px-6 py-0">
@@ -298,8 +282,6 @@ export default function KoszykPage() {
                                 </Table>
                             </CardContent>
                         </Card>
-
-                        {/* --- FORMULARZ ADRESOWY Z WALIDACJĄ --- */}
                         <Card>
                             <CardHeader><CardTitle>Adres Dostawy</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
@@ -311,7 +293,6 @@ export default function KoszykPage() {
                                             {...form.register('firstName')}
                                             onChange={(e) => {
                                                 const value = e.target.value;
-                                                // Pozwól tylko na litery, spacje i myślniki
                                                 const filteredValue = value.replace(/[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s-]/g, '');
                                                 if (filteredValue !== value) {
                                                     e.target.value = filteredValue;
@@ -333,7 +314,6 @@ export default function KoszykPage() {
                                             {...form.register('lastName')}
                                             onChange={(e) => {
                                                 const value = e.target.value;
-                                                // Pozwól tylko na litery, spacje i myślniki
                                                 const filteredValue = value.replace(/[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s-]/g, '');
                                                 if (filteredValue !== value) {
                                                     e.target.value = filteredValue;
@@ -355,7 +335,7 @@ export default function KoszykPage() {
                                         id="street"
                                         {...form.register('street')}
                                         onChange={(e) => {
-                                            const value = e.target.value.trimStart(); // Usuń spacje z początku
+                                            const value = e.target.value.trimStart();
                                             e.target.value = value;
                                             form.setValue('street', value, { shouldValidate: true });
                                             form.trigger('street');
@@ -377,22 +357,18 @@ export default function KoszykPage() {
                                             onChange={(e) => {
                                                 let value = e.target.value.replace(/\D/g, ''); // Usuń wszystko oprócz cyfr
 
-                                                // Automatycznie dodaj myślnik po 2 cyfrach
                                                 if (value.length >= 2) {
                                                     value = value.slice(0, 2) + '-' + value.slice(2, 5);
                                                 }
 
-                                                // Aktualizuj pole w formularzu
                                                 e.target.value = value;
                                                 form.setValue('postalCode', value, { shouldValidate: true });
                                                 form.trigger('postalCode'); // Wywołaj walidację
                                             }}
                                             onKeyDown={(e) => {
-                                                // Pozwól na usuwanie i nawigację
                                                 if (['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
                                                     return;
                                                 }
-                                                // Pozwól tylko na cyfry
                                                 if (!/\d/.test(e.key)) {
                                                     e.preventDefault();
                                                 }
@@ -411,7 +387,6 @@ export default function KoszykPage() {
                                             {...form.register('city')}
                                             onChange={(e) => {
                                                 const value = e.target.value;
-                                                // Pozwól tylko na litery, spacje i myślniki
                                                 const filteredValue = value.replace(/[^a-zA-ZąćęłńóśźżĄĆĘŁŃÓŚŹŻ\s-]/g, '');
                                                 if (filteredValue !== value) {
                                                     e.target.value = filteredValue;
@@ -436,23 +411,15 @@ export default function KoszykPage() {
                                         placeholder="+48 123 456 789"
                                         onChange={(e) => {
                                             let value = e.target.value;
-
-                                            // Usuń wszystko oprócz cyfr, spacji, myślników, nawiasów i znaku +
                                             value = value.replace(/[^\d\s+()-]/g, '');
-
-                                            // Formatowanie automatyczne dla polskich numerów
                                             const digitsOnly = value.replace(/\D/g, '');
-
-                                            // Jeśli użytkownik wpisuje 9 cyfr bez prefiksu, dodaj +48
                                             if (digitsOnly.length === 9 && !value.includes('+48')) {
                                                 value = `+48 ${digitsOnly.slice(0,3)} ${digitsOnly.slice(3,6)} ${digitsOnly.slice(6,9)}`;
                                             }
-                                            // Jeśli zaczyna się od 48, formatuj jako +48
                                             else if (digitsOnly.startsWith('48') && digitsOnly.length === 11) {
                                                 const phoneDigits = digitsOnly.slice(2);
                                                 value = `+48 ${phoneDigits.slice(0,3)} ${phoneDigits.slice(3,6)} ${phoneDigits.slice(6,9)}`;
                                             }
-                                            // Podstawowe formatowanie dla innych przypadków
                                             else if (digitsOnly.length > 0 && !value.includes('+48')) {
                                                 if (digitsOnly.length <= 3) {
                                                     value = digitsOnly;
@@ -468,25 +435,20 @@ export default function KoszykPage() {
                                             form.trigger('phoneNumber');
                                         }}
                                         onKeyDown={(e) => {
-                                            // Pozwól na usuwanie i nawigację
                                             if (['Backspace', 'Delete', 'Tab', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
                                                 return;
                                             }
-                                            // Pozwól tylko na cyfry, spacje, myślniki, nawiasy i znak +
                                             if (!/[\d\s+()-]/.test(e.key)) {
                                                 e.preventDefault();
                                             }
-                                            // Ogranicz długość wprowadzania
                                             const currentLength = (e.target as HTMLInputElement).value.replace(/\D/g, '').length;
                                             if (currentLength >= 11 && /\d/.test(e.key)) {
                                                 e.preventDefault();
                                             }
                                         }}
                                         onBlur={(e) => {
-                                            // Dodatkowa walidacja po opuszczeniu pola
                                             const value = e.target.value;
                                             const digitsOnly = value.replace(/\D/g, '');
-
                                             if (digitsOnly.length > 0 && digitsOnly.length < 9) {
                                                 form.setError('phoneNumber', {
                                                     type: 'manual',
@@ -513,8 +475,6 @@ export default function KoszykPage() {
                             </CardContent>
                         </Card>
                     </div>
-
-                    {/* Podsumowanie zamówienia */}
                     <div className="lg:col-span-1">
                         <Card className="sticky top-24 shadow-lg">
                             <CardHeader><CardTitle>Podsumowanie</CardTitle></CardHeader>

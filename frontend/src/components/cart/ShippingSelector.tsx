@@ -19,7 +19,6 @@ type Props = {
     onChange: (id: string, price: number) => void;
 };
 
-/** Pobiera aktywne metody dostawy i pozwala wybrać jedną. */
 export function ShippingSelector({ selectedId, onChange }: Props) {
     const { data, isLoading } = useQuery({
         queryKey: ['store-shipping'],
@@ -29,7 +28,6 @@ export function ShippingSelector({ selectedId, onChange }: Props) {
 
     useEffect(() => {
         if (!data || !data.length) return;
-        // Auto-wybór: jeśli nic nie wybrane, wybierz najtańszą aktywną
         if (!selectedId) {
             const cheapest = [...data].sort((a, b) => a.price - b.price)[0];
             if (cheapest) onChange(cheapest.id, cheapest.price);

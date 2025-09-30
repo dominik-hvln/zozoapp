@@ -3,8 +3,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { toast } from 'sonner';
-
-// Import komponentów UI
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -13,8 +11,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Loader2 } from 'lucide-react';
 
-// --- ZAKTUALIZOWANY INTERFEJS ZAMÓWIENIA ---
-// Odzwierciedla nową strukturę danych z backendu
 interface Order {
     id: string;
     status: string;
@@ -33,7 +29,7 @@ interface Order {
         quantity: number;
         price: number;
         name: string;
-    }> | null; // orderItems może być null, jeśli zamówienie nie ma produktów
+    }> | null;
 }
 
 const getOrders = async (): Promise<Order[]> => {
@@ -106,21 +102,18 @@ export default function AdminOrdersPage() {
     );
 }
 
-// --- ZAKTUALIZOWANY KOMPONENT DIALOGU ---
 function OrderDetailsDialog({ order }: { order: Order }) {
     return (
         <Dialog>
             <DialogTrigger asChild>
                 <Button variant="outline" size="sm">Zobacz szczegóły</Button>
             </DialogTrigger>
-            {/* Dodajemy klasę, aby okno było szersze */}
             <DialogContent className="sm:max-w-4xl">
                 <DialogHeader>
                     <DialogTitle>Szczegóły zamówienia</DialogTitle>
                     <p className="text-sm text-muted-foreground font-mono pt-1">{order.id}</p>
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6 py-4">
-                    {/* Kolumna 1: Klient i Adres */}
                     <div className="space-y-4">
                         <Card>
                             <CardHeader><CardTitle className="text-lg">Klient</CardTitle></CardHeader>
@@ -139,7 +132,6 @@ function OrderDetailsDialog({ order }: { order: Order }) {
                         </Card>
                     </div>
 
-                    {/* Kolumna 2: Produkty */}
                     <div className="space-y-4">
                         <Card>
                             <CardHeader><CardTitle className="text-lg">Produkty w zamówieniu</CardTitle></CardHeader>
@@ -156,7 +148,6 @@ function OrderDetailsDialog({ order }: { order: Order }) {
                         </Card>
                     </div>
 
-                    {/* Kolumna 3: Podsumowanie */}
                     <div className="space-y-4">
                         <Card>
                             <CardHeader><CardTitle className="text-lg">Dostawa</CardTitle></CardHeader>

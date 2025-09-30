@@ -4,7 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { api } from '@/lib/api';
-
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,7 +18,6 @@ import {
 import { useAuthStore } from '@/store/auth.store';
 import { useRouter } from 'next/navigation';
 
-// Schemat walidacji dla logowania
 const loginSchema = z.object({
     email: z.string().email('Nieprawidłowy adres email'),
     password: z.string().min(1, 'Hasło jest wymagane'),
@@ -45,14 +44,12 @@ export function LoginForm() {
             setToken(access_token);
 
             console.log('Logowanie pomyślne!', access_token);
-            alert('Logowanie pomyślne! Zostaniesz przekierowany do panelu.');
-
-            // Przekieruj użytkownika do panelu
+            toast.success('Logowanie pomyślne! Zostaniesz przekierowany do panelu.');
             router.push('/panel');
 
         } catch (error) {
             console.error('Błąd logowania:', error);
-            alert('Nieprawidłowy email lub hasło.');
+            toast.error('Nieprawidłowy email lub hasło.');
         }
     };
 

@@ -37,7 +37,6 @@ export const useCartStore = create(
                 set((state) => ({
                     items: state.items.filter((item) => item.id !== productId),
                 })),
-            // NOWA DEFINICJA FUNKCJI
             updateItemQuantity: (productId, quantity) =>
                 set((state) => ({
                     items: state.items.map((item) =>

@@ -4,10 +4,9 @@ import { api } from '@/lib/api';
 import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '../ui/button';
 import { ArrowRight, PlusCircle } from 'lucide-react';
 import Image from 'next/image';
-// Import awatarów
+
 import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
 import StrawberryIcon from '@/assets/avatars/strawberry.svg';

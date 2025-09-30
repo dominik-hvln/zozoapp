@@ -3,7 +3,7 @@ import { Preferences } from '@capacitor/preferences';
 
 const SERVER = 'pl.appity.zozoapp';
 const PREF_KEY = 'bio_prompt_state';
-const DECLINE_COOLDOWN_DAYS = 90; // tyle nie pytamy po odmowie
+const DECLINE_COOLDOWN_DAYS = 90;
 
 type BiometricCheck = {
     available: boolean;
@@ -29,7 +29,6 @@ export async function checkBiometrics(useFallback = true): Promise<BiometricChec
     }
 }
 
-/** Czy cokolwiek jest już zapisane w sejfie? (i co) */
 export async function getSavedCredentials():
     Promise<{ email: string; hasPassword: boolean } | null> {
     try {
@@ -41,23 +40,18 @@ export async function getSavedCredentials():
     }
 }
 
-/** Po udanym logowaniu — zapis do sejfu */
 export async function saveCredentials(email: string, password: string): Promise<boolean> {
     const { available } = await checkBiometrics(true);
     if (!available) return false;
 
     await NativeBiometric.setCredentials({ username: email, password, server: SERVER });
-    // Po zapisie skasuj ewentualną „odmowę”
     await Preferences.remove({ key: PREF_KEY });
     return true;
 }
 
-/** Promptować czy nie? Uwzględnia: dostępność biometrii, odmowę z cooldownem, stan sejfu */
 export async function shouldPromptToSave(currentEmail: string): Promise<boolean> {
     const { available } = await checkBiometrics(true);
     if (!available) return false;
-
-    // Czy user niedawno odmówił?
     const pref = await Preferences.get({ key: PREF_KEY });
     if (pref.value) {
         try {
@@ -69,23 +63,18 @@ export async function shouldPromptToSave(currentEmail: string): Promise<boolean>
         } catch {/* ignore */}
     }
 
-    // Czy już mamy zapis, i to dla tego samego maila?
     const saved = await getSavedCredentials();
     if (saved && saved.email === currentEmail) {
-        // już zapisane dla tego maila -> nie pytamy
         return false;
     }
 
-    // Brak zapisu lub zapis dla innego maila -> zapytaj
     return true;
 }
 
-/** Zaznacz, że user odmówił (żeby nie pytać w kółko) */
 export async function markPromptDeclined(): Promise<void> {
     await Preferences.set({ key: PREF_KEY, value: JSON.stringify({ declinedAt: Date.now() }) });
 }
 
-/** Autouzupełnienie po biometrii */
 export async function autofillWithBiometrics():
     Promise<{ email: string; password: string } | null> {
     const { available } = await checkBiometrics(true);

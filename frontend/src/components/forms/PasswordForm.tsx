@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-// Schemat Walidacji Hasła z Potwierdzeniem
 const passwordSchema = z.object({
     oldPass: z.string().min(1, 'Stare hasło jest wymagane.'),
     newPass: z.string().min(8, 'Nowe hasło musi mieć co najmniej 8 znaków.'),
@@ -24,11 +23,9 @@ const passwordSchema = z.object({
 
 type PasswordFormValues = z.infer<typeof passwordSchema>;
 
-// Funkcja API
 const changePassword = async (data: Omit<PasswordFormValues, 'confirmNewPassword'>) =>
     (await api.post('/profile/me/change-password', data)).data;
 
-// Komponent
 export function PasswordForm() {
     const form = useForm<PasswordFormValues>({
         resolver: zodResolver(passwordSchema),
@@ -48,7 +45,6 @@ export function PasswordForm() {
     });
 
     const onSubmit = (data: PasswordFormValues) => {
-        // Omijamy wysyłanie pola 'confirmNewPassword' do API
         const { confirmNewPassword, ...submissionData } = data;
         mutation.mutate(submissionData);
     };
@@ -77,7 +73,7 @@ export function PasswordForm() {
                         <FormMessage />
                     </FormItem>
                 )} />
-                <Button type="submit" disabled={mutation.isPending}>
+                <Button type="submit" disabled={mutation.isPending} className="bg-orange-400 hover:bg-orange-500">
                     {mutation.isPending ? 'Zmienianie...' : 'Zmień hasło'}
                 </Button>
             </form>

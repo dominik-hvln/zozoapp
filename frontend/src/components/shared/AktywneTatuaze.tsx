@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sticker } from 'lucide-react';
 
-// Definicja typów
 interface TattooInstance { unique_code: string; }
 interface Child { name: string; }
 import { format } from 'date-fns';

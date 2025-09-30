@@ -4,8 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useState } from 'react';
 import { toast } from 'sonner';
-
-// Import komponentów
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +13,6 @@ import { PlusCircle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 
-// --- TYPY I FUNKCJE API ---
 interface ShippingMethod {
     id: string;
     name: string;
@@ -23,8 +20,6 @@ interface ShippingMethod {
     is_active: boolean;
 }
 
-// --- POPRAWKA TUTAJ ---
-// Definiujemy konkretny typ dla danych wysyłanych do API
 interface CreateShippingDto {
     name: string;
     price: number;
@@ -32,15 +27,12 @@ interface CreateShippingDto {
 }
 
 const getShippingMethods = async (): Promise<ShippingMethod[]> => (await api.get('/admin/shipping')).data;
-// Zastępujemy 'any' nowym, zdefiniowanym typem
 const createShippingMethod = async (data: CreateShippingDto) => (await api.post('/admin/shipping', data)).data;
 
-// --- KOMPONENT ---
 export default function AdminShippingPage() {
     const [isOpen, setIsOpen] = useState(false);
     const [formState, setFormState] = useState({ name: '', price: 0, is_active: true });
     const queryClient = useQueryClient();
-
     const { data: shippingMethods, isLoading } = useQuery({ queryKey: ['admin-shipping'], queryFn: getShippingMethods });
 
     const mutation = useMutation({
@@ -49,7 +41,7 @@ export default function AdminShippingPage() {
             queryClient.invalidateQueries({ queryKey: ['admin-shipping'] });
             toast.success('Metoda dostawy została utworzona!');
             setIsOpen(false);
-            setFormState({ name: '', price: 0, is_active: true }); // Reset formularza
+            setFormState({ name: '', price: 0, is_active: true });
         },
         onError: () => {
             toast.error('Wystąpił błąd podczas tworzenia metody dostawy.');
@@ -60,7 +52,7 @@ export default function AdminShippingPage() {
         e.preventDefault();
         const dataToSubmit: CreateShippingDto = {
             ...formState,
-            price: Math.round(formState.price * 100), // Cena w groszach
+            price: Math.round(formState.price * 100),
         };
         mutation.mutate(dataToSubmit);
     };

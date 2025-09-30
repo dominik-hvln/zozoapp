@@ -1,5 +1,3 @@
-// app-klient/src/types/index.ts
-
 export interface Child {
     id: string;
     name: string;

@@ -5,7 +5,6 @@ import { api } from '@/lib/api';
 import { useState } from 'react';
 import { toast } from 'sonner';
 
-// Import komponentów
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -16,8 +15,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 
-// --- TYPY I FUNKCJE API ---
-// POPRAWKA: Definiujemy precyzyjny, bezpieczny typ
 interface DiscountCode {
     id: string;
     code: string;
@@ -27,13 +24,11 @@ interface DiscountCode {
     expires_at: string | null;
     created_at: string;
 }
-// POPRAWKA: Definiujemy typ dla danych wejściowych
 type CreateDiscountCodeDto = Omit<DiscountCode, 'id' | 'created_at' | 'expires_at'>;
 
 const getDiscountCodes = async (): Promise<DiscountCode[]> => (await api.get('/admin/discounts')).data;
 const createDiscountCode = async (data: CreateDiscountCodeDto) => (await api.post('/admin/discounts', data)).data;
 
-// --- KOMPONENT ---
 export default function AdminDiscountsPage() {
     const [isOpen, setIsOpen] = useState(false);
     const [formState, setFormState] = useState({
@@ -95,7 +90,6 @@ export default function AdminDiscountsPage() {
                     <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                         <div><Label>Kod</Label><Input value={formState.code} onChange={e => setFormState({...formState, code: e.target.value.toUpperCase()})} /></div>
                         <div><Label>Typ</Label>
-                            {/* POPRAWKA: Używamy poprawnego typu dla `onValueChange` */}
                             <Select value={formState.type} onValueChange={(value: 'PERCENTAGE' | 'FIXED_AMOUNT') => setFormState({...formState, type: value})}>
                                 <SelectTrigger><SelectValue/></SelectTrigger>
                                 <SelectContent>

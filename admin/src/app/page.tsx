@@ -16,8 +16,6 @@ interface Stats {
 
 const getStats = async (): Promise<Stats> => (await api.get('/admin/stats')).data;
 
-
-// --- KOMPONENT ---
 export default function AdminDashboardPage() {
     const { data: stats, isLoading } = useQuery({
         queryKey: ['admin-stats'],

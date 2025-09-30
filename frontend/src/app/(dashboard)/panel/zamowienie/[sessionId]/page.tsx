@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { PartyPopper } from 'lucide-react';
 
-// Zmieniamy funkcję: teraz pobiera dane, a nie tworzy
 const getOrderBySessionId = async (sessionId: string) => (await api.get(`/store/orders/by-session/${sessionId}`)).data;
 
 export default function OrderSummaryPage() {
@@ -18,7 +17,6 @@ export default function OrderSummaryPage() {
         queryKey: ['order-summary', sessionId],
         queryFn: () => getOrderBySessionId(sessionId),
         enabled: !!sessionId,
-        // Próbujemy pobrać dane kilka razy, dając czas webhookowi na ich stworzenie
         retry: 5,
         retryDelay: 1000,
     });

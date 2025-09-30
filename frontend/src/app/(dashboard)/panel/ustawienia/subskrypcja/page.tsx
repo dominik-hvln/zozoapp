@@ -67,7 +67,7 @@ export default function SubscriptionPage() {
                                 Twój okres próbny kończy się: {format(new Date(profile.trial_expires_at), 'PPP', { locale: pl })}
                             </p>
                         )}
-                        <Button onClick={handleManageSubscription} disabled={isLoading} className="w-full mt-4">
+                        <Button onClick={handleManageSubscription} disabled={isLoading} className="w-full mt-4 bg-orange-400 hover:bg-orange-500">
                             {isLoading
                                 ? 'Ładowanie...'
                                 : user?.status === 'TRIAL'

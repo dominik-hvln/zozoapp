@@ -7,8 +7,6 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import Image, { StaticImageData } from 'next/image';
-
-// Import komponentów
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -18,7 +16,6 @@ import { Label } from '@/components/ui/label';
 import { ShoppingCart, Search, List, LayoutGrid } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
-// Import awatarów - dostosuj do swoich plików
 import AppleIcon from '@/assets/avatars/apple.svg';
 import BananaIcon from '@/assets/avatars/banana.svg';
 
@@ -26,7 +23,6 @@ const productImages: { [key: string]: StaticImageData } = {
     'Zestaw Tatuaży ZozoApp': AppleIcon,
 };
 
-// --- TYPY I FUNKCJE API ---
 interface ProductVariant {
     id: string;
     quantity: number;
@@ -49,7 +45,6 @@ const getProducts = async (searchTerm: string, sortBy: string): Promise<Product[
     return response.data;
 };
 
-// --- KOMPONENT KARTY PRODUKTU (WIDOK SIATKI) ---
 function ProductCard({ product }: { product: Product }) {
     const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(product.product_variants[0]?.id);
     const addItemToCart = useCartStore((state) => state.addItem);

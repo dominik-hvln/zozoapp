@@ -125,7 +125,7 @@ export default function DzieciPage() {
                 <h1 className="text-3xl font-bold">Twoje Dzieci</h1>
                 <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button onClick={openNewDialog}>
+                        <Button onClick={openNewDialog} className="bg-orange-400 hover:bg-orange-500">
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Dodaj Dziecko
                         </Button>
@@ -188,7 +188,7 @@ export default function DzieciPage() {
                                 />
                             </div>
                             <div className="flex gap-2 pt-4">
-                                <Button type="submit" disabled={childMutation.isPending}>
+                                <Button type="submit" disabled={childMutation.isPending} className="bg-orange-400 hover:bg-orange-500">
                                     {childMutation.isPending ? 'Zapisywanie...' : (editingChild ? 'Zaktualizuj' : 'Dodaj dziecko')}
                                 </Button>
                                 <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>

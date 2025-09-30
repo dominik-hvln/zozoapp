@@ -2,14 +2,11 @@
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BellRing, CheckCheck } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-
-// --- TYPY I FUNKCJE API ---
 interface Notification {
     id: string;
     type: string;
@@ -28,8 +25,6 @@ const markAsRead = async (notificationId: string) => {
     await api.patch(`/notifications/${notificationId}/read`);
 };
 
-
-// --- GŁÓWNY KOMPONENT ---
 export default function PowiadomieniaPage() {
     const queryClient = useQueryClient();
     const { data: notifications, isLoading } = useQuery({
@@ -40,7 +35,6 @@ export default function PowiadomieniaPage() {
     const mutation = useMutation({
         mutationFn: markAsRead,
         onSuccess: () => {
-            // Po sukcesie, odświeżamy listę powiadomień i licznik nieprzeczytanych
             queryClient.invalidateQueries({ queryKey: ['notifications'] });
             queryClient.invalidateQueries({ queryKey: ['unreadNotificationsCount'] });
         },

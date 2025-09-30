@@ -9,7 +9,6 @@ import Providers from '@/components/providers';
 import { Toaster } from '@/components/ui/sonner';
 import "./globals.css";
 
-// Komponent Chronionego Layoutu
 function ProtectedLayout({ children }: { children: React.ReactNode }) {
     const { user, token } = useAuthStore();
     const router = useRouter();
@@ -41,7 +40,6 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
     );
 }
 
-// Główny Layout Aplikacji
 export default function RootLayout({ children }: { children: React.ReactNode; }) {
     const pathname = usePathname();
     const isLoginPage = pathname === '/login';

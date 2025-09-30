@@ -28,7 +28,6 @@ interface ProfileData {
 
 const getProfile = async (): Promise<ProfileData> => (await api.get('/profile/me')).data;
 
-// --- KOMPONENT ---
 export default function ProfilPage() {
     const { data: profile, isLoading } = useQuery({ queryKey: ['fullProfile'], queryFn: getProfile });
     const { user, logout } = useAuthStore();
@@ -106,7 +105,7 @@ export default function ProfilPage() {
                                             <p className="text-sm text-muted-foreground">{child._count?.assignments || 0} aktywnych tatuaży</p>
                                         </div>
                                     </div>
-                                    <Button asChild>
+                                    <Button asChild className="bg-orange-400 hover:bg-orange-500">
                                         <Link href={`/panel/dzieci/${child.id}`}><Edit className="mr-2 h-4 w-4"/>Edytuj</Link>
                                     </Button>
                                 </div>

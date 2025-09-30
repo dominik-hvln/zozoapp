@@ -25,8 +25,8 @@ import {
     checkBiometrics,
     humanizeBiometricError,
     getBiometricErrorCode,
-    shouldPromptToSave,      // NEW
-    markPromptDeclined,      // NEW
+    shouldPromptToSave,
+    markPromptDeclined,
 } from '@/lib/biometric-credentials';
 
 const loginSchema = z.object({
@@ -108,7 +108,7 @@ export default function LoginForm() {
                             id="email"
                             type="email"
                             className="h-[50px]"
-                            autoComplete="username"   // web autofill
+                            autoComplete="username"
                             inputMode="email"
                             autoCapitalize="off"
                             autoCorrect="off"
@@ -125,7 +125,7 @@ export default function LoginForm() {
                             id="password"
                             type="password"
                             className="h-[50px]"
-                            autoComplete="current-password" // web autofill
+                            autoComplete="current-password"
                             autoCapitalize="off"
                             autoCorrect="off"
                             spellCheck={false}

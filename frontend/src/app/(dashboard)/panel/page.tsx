@@ -20,7 +20,6 @@ interface Child { id: string; name: string; avatar_url: string | null; _count: {
 
 const getDashboardSummary = async (): Promise<DashboardData> => (await api.get('/dashboard/summary')).data;
 
-// --- KOMPONENT ---
 export default function PanelPage() {
     const [selectedScan, setSelectedScan] = useState<Scan | null>(null);
     const { data, isLoading, error } = useQuery({ queryKey: ['dashboardSummary'], queryFn: getDashboardSummary });

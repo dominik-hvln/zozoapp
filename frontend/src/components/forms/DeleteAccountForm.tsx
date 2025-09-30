@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { AxiosError } from 'axios';
 import { useMutation } from '@tanstack/react-query';
 import { api } from '@/lib/api';
-import { useRouter } from 'next/navigation'; // <-- Dodaj tę linię
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,11 +19,9 @@ const deleteAccountSchema = z.object({
 
 type DeleteAccountFormValues = z.infer<typeof deleteAccountSchema>;
 
-// Funkcja API do usuwania konta
 const deleteAccount = async (data: DeleteAccountFormValues) =>
     (await api.delete('/profile/me/delete-account', { data })).data;
 
-// Komponent
 export function DeleteAccountForm() {
     const router = useRouter();
     const form = useForm<DeleteAccountFormValues>({
@@ -35,7 +33,6 @@ export function DeleteAccountForm() {
         mutationFn: deleteAccount,
         onSuccess: () => {
             toast.success('Konto zostało pomyślnie usunięte!');
-            // Przekierowanie na stronę główną lub logowania po usunięciu
             router.push('/');
         },
         onError: (error: AxiosError) => {

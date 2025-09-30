@@ -28,13 +28,9 @@ export default function ProfilEditPage() {
         mutationFn: uploadAvatar,
         onSuccess: async () => {
             toast.success('Awatar został pomyślnie zmieniony!');
-
-            // OSTATECZNE ROZWIĄZANIE: Odświeżamy sesję w tle
             try {
                 const response = await api.post('/auth/refresh');
-                // Podmieniamy stary token na nowy, który zawiera już link do awatara
                 setToken(response.data.access_token);
-                // Unieważniamy zapytania, aby mieć pewność, że wszystkie dane są świeże
                 await queryClient.invalidateQueries({ queryKey: ['profile'] });
                 await queryClient.invalidateQueries({ queryKey: ['fullProfile'] });
             } catch (error) {

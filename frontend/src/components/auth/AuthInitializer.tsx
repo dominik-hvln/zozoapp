@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -11,15 +10,12 @@ export function AuthInitializer() {
 
     useEffect(() => {
         initializeAuth();
-
-        // Obsługa wznowienia aplikacji mobilnej
         if (Capacitor.isNativePlatform()) {
             let listenerHandle: { remove: () => void } | null = null;
 
             const setupListener = async () => {
                 listenerHandle = await App.addListener('appStateChange', ({ isActive }) => {
                     if (isActive && token) {
-                        console.log('[AUTH] Aplikacja wznowiona - sprawdzam token');
                         refreshToken();
                     }
                 });

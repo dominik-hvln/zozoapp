@@ -8,8 +8,6 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 import Image from 'next/image';
-
-// Import komponentów
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +22,6 @@ import Link from 'next/link';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AppleIcon from '@/assets/avatars/apple.svg';
 
-// --- TYPY I FUNKCJE API ---
 interface Child {
     id: string; name: string; avatar_url: string | null; date_of_birth: string | null;
     important_info: string | null; illnesses: string | null; allergies: string | null;
@@ -36,7 +33,6 @@ const uploadAvatar = async (data: FormData) => (await api.post('/uploads/avatar'
     headers: { 'Content-Type': 'multipart/form-data' }
 })).data;
 
-// --- KOMPONENT ---
 export default function DzieckoEditFormPage() {
     const params = useParams();
     const router = useRouter();
@@ -180,11 +176,11 @@ export default function DzieckoEditFormPage() {
                             <div className="mt-6 border-t pt-6">
                                 <AlertDialog>
                                     <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" className="w-full">Usuń dziecko</Button>
+                                        <Button variant="destructive" className="w-full">Usuń profil dziecka</Button>
                                     </AlertDialogTrigger>
                                     <AlertDialogContent>
                                         <AlertDialogHeader>
-                                            <AlertDialogTitle>Czy na pewno chcesz usunąć to dziecko?</AlertDialogTitle>
+                                            <AlertDialogTitle>Czy na pewno chcesz usunąć profil dziecka?</AlertDialogTitle>
                                             <AlertDialogDescription>
                                                 Ta akcja jest nieodwracalna. Spowoduje to trwałe usunięcie profilu dziecka i wszystkich powiązanych z nim danych, w tym aktywnych tatuaży.
                                             </AlertDialogDescription>

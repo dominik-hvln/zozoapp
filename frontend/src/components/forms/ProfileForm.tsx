@@ -7,13 +7,10 @@ import { toast } from 'sonner';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { useEffect } from 'react';
-
-// Import komponentów
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 
-// --- TYPY I SCHEMAT ---
 interface ProfileData {
     first_name: string | null;
     last_name: string | null;
@@ -26,10 +23,8 @@ const profileSchema = z.object({
 });
 type ProfileFormValues = z.infer<typeof profileSchema>;
 
-// --- FUNKCJA API ---
 const updateProfile = async (data: ProfileFormValues) => (await api.patch('/profile/me', data)).data;
 
-// --- KOMPONENT ---
 export function ProfileForm({ profileData }: { profileData: ProfileData | undefined }) {
     const queryClient = useQueryClient();
 
@@ -56,8 +51,6 @@ export function ProfileForm({ profileData }: { profileData: ProfileData | undefi
         mutationFn: updateProfile,
         onSuccess: async () => {
             toast.success('Profil został pomyślnie zaktualizowany!');
-
-            // Unieważniamy cache, aby odświeżyć dane
             await queryClient.invalidateQueries({ queryKey: ['fullProfile'] });
             await queryClient.invalidateQueries({ queryKey: ['profile'] });
         },

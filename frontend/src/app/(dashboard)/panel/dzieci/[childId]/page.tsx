@@ -5,15 +5,12 @@ import { api } from '@/lib/api';
 import { useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-
-// Import komponentów
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Edit, PlusCircle, QrCode } from 'lucide-react';
 import AppleIcon from '@/assets/avatars/apple.svg';
 
-// --- TYPY I API ---
 interface ChildDetails {
     id: string; name: string; avatar_url: string | null; date_of_birth: string | null;
     important_info: string | null; illnesses: string | null; allergies: string | null;
@@ -27,7 +24,6 @@ const calculateAge = (dob: string | null) => {
     return `${age} lat`;
 };
 
-// --- KOMPONENT ---
 export default function DzieckoDetailsPage() {
     const params = useParams();
     const childId = params.childId as string;
@@ -63,10 +59,9 @@ export default function DzieckoDetailsPage() {
                                     {child.date_of_birth && <span className="text-muted-foreground">{calculateAge(child.date_of_birth)}</span>}
                                 </CardHeader>
                                 <CardContent>
-                                    {/* OSTATECZNA POPRAWKA: Poprawny link do strony edycji */}
-                                    <Button asChild className="w-full">
+                                    <Button asChild className="w-full bg-orange-400 hover:bg-orange-500">
                                         <Link href={`/panel/dzieci/edytuj/${childId}`}>
-                                            <Edit className="mr-2 h-4 w-4"/> Edytuj profil
+                                            <Edit className="mr-2 h-4 w-4"/> Edytuj profil dziecka
                                         </Link>
                                     </Button>
                                 </CardContent>

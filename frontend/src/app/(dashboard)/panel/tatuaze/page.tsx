@@ -29,7 +29,6 @@ export default function TatuazePage() {
         const kodFromUrl = searchParams.get('kod');
         if (kodFromUrl) {
             setScannedCode(kodFromUrl);
-            // Wyczyść parametr z URL, aby uniknąć ponownego ustawienia stanu
             router.replace('/panel/tatuaze', {scroll: false});
         }
     }, [searchParams, router]);
@@ -40,7 +39,7 @@ export default function TatuazePage() {
         mutationFn: activateTattoo,
         onSuccess: () => {
             toast.success('Sukces!', { description: 'Tatuaż został pomyślnie aktywowany.' });
-            queryClient.invalidateQueries({ queryKey: ['activeTattoos'] }); // Odśwież listę aktywnych tatuaży
+            queryClient.invalidateQueries({ queryKey: ['activeTattoos'] });
             setScannedCode(null);
             setSelectedChildId(null);
         },
@@ -71,7 +70,6 @@ export default function TatuazePage() {
             </div>
 
             <div className="p-6 border rounded-lg bg-white shadow-sm">
-                {/* Ta sekcja pozostaje bez zmian */}
                 {scannedCode ? (
                     <>
                         <Alert variant="default" className="bg-green-50 border-green-200 mb-4">
@@ -102,7 +100,7 @@ export default function TatuazePage() {
                             <p className="text-sm text-muted-foreground">Kliknij, aby uruchomić skaner i przypisać kod do dziecka.</p>
                         </div>
                         <Link href="/panel/tatuaze/skanuj">
-                            <Button>
+                            <Button className="bg-orange-400 hover:bg-orange-500">
                                 <Sticker className="mr-2 h-4 w-4" />
                                 Rozpocznij Skanowanie
                             </Button>
@@ -110,8 +108,6 @@ export default function TatuazePage() {
                     </div>
                 )}
             </div>
-
-            {/* Dodajemy nową sekcję z listą */}
             <AktywneTatuaze />
         </div>
     );

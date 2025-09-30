@@ -10,7 +10,6 @@ import { Phone, HeartPulse, ShieldAlert, Info, Loader2, MapPin } from "lucide-re
 import Image from "next/image";
 import AppleIcon from '@/assets/avatars/apple.svg';
 
-// --- TYPY DANYCH ---
 interface ScanData {
     scanId: string;
     child: {
@@ -20,7 +19,6 @@ interface ScanData {
     parent: { fullName: string; phone: string | null; };
 }
 
-// --- KOMPONENT DO OBSŁUGI LOKALIZACJI ---
 function LocationHandler({ scanId }: { scanId: string }) {
     const [status, setStatus] = useState<'pending' | 'success' | 'error'>('pending');
 
@@ -43,7 +41,6 @@ function LocationHandler({ scanId }: { scanId: string }) {
     return <p className="text-sm text-red-500">Nie udało się pobrać lokalizacji.</p>;
 }
 
-// --- GŁÓWNY KOMPONENT STRONY ---
 export default function ScanPage() {
     const params = useParams();
     const uniqueCode = params.uniqueCode as string;

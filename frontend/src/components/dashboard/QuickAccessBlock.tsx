@@ -30,7 +30,7 @@ export function QuickAccessBlock() {
             <div className="mt-4 pt-4 border-t">
                 <p className="text-sm font-medium mb-2">Szybki dostęp</p>
                 <div className="flex flex-wrap gap-2">
-                    <Button asChild size="sm">
+                    <Button asChild size="sm" className="bg-orange-400 hover:bg-orange-500">
                         <Link href="/panel/tatuaze/skanuj"><PlusCircle className="h-4 w-4 mr-2" />Aktywuj tatuaż</Link>
                     </Button>
                     <Button asChild size="sm" variant="outline">

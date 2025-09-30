@@ -25,17 +25,16 @@ export default function AdminUsersPage() {
     const user = useAuthStore((state) => state.user);
     const router = useRouter();
 
-    // Ochrona trasy po stronie klienta
     useEffect(() => {
         if (user && user.role !== 'ADMIN') {
-            router.push('/panel'); // Przekieruj, jeśli nie jest adminem
+            router.push('/panel');
         }
     }, [user, router]);
 
     const { data: users, isLoading, error } = useQuery({
         queryKey: ['admin-users'],
         queryFn: getUsers,
-        enabled: user?.role === 'ADMIN', // Uruchom zapytanie tylko, jeśli użytkownik jest adminem
+        enabled: user?.role === 'ADMIN',
     });
 
     if (!user || user.role !== 'ADMIN') {
@@ -63,8 +62,8 @@ export default function AdminUsersPage() {
                         {users?.map((u) => (
                             <TableRow
                                 key={u.id}
-                                onClick={() => router.push(`/admin/users/${u.id}`)} // Dodajemy akcję onClick
-                                className="cursor-pointer hover:bg-gray-50" // Zmieniamy kursor
+                                onClick={() => router.push(`/admin/users/${u.id}`)}
+                                className="cursor-pointer hover:bg-gray-50"
                             >
                                 <TableCell className="font-medium">{u.email}</TableCell>
                                 <TableCell>{u.name || '-'}</TableCell>
