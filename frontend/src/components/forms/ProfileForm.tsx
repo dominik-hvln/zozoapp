@@ -66,7 +66,7 @@ export function ProfileForm({ profileData }: { profileData: ProfileData | undefi
                 <FormField control={form.control} name="firstName" render={({ field }) => (<FormItem><FormLabel>Imię</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="lastName" render={({ field }) => (<FormItem><FormLabel>Nazwisko</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="phone" render={({ field }) => (<FormItem><FormLabel>Telefon</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>)} />
-                <Button type="submit" disabled={mutation.isPending} className="w-full">
+                <Button type="submit" disabled={mutation.isPending} className="w-full bg-orange-400 hover:bg-orange-500">
                     {mutation.isPending ? 'Zapisywanie...' : 'Zapisz zmiany'}
                 </Button>
             </form>
