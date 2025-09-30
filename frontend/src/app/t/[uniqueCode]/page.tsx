@@ -6,7 +6,7 @@ import { api } from '@/lib/api';
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Phone, HeartPulse, ShieldAlert, Info, Loader2, MapPin } from "lucide-react";
+import { Phone, HeartPulse, ShieldAlert, Loader2, MapPin } from "lucide-react";
 import Image from "next/image";
 import AppleIcon from '@/assets/avatars/apple.svg';
 

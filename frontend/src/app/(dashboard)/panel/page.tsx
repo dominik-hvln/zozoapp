@@ -16,8 +16,6 @@ const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapCo
 const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
 const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
 
-interface Child { id: string; name: string; avatar_url: string | null; _count: { assignments: number }; }
-
 const getDashboardSummary = async (): Promise<DashboardData> => (await api.get('/dashboard/summary')).data;
 
 export default function PanelPage() {

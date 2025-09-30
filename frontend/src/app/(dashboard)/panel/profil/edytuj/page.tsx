@@ -11,7 +11,6 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { useAuthStore } from '@/store/auth.store';
-import { useParams } from 'next/navigation';
 
 const getProfile = async () => (await api.get('/profile/me')).data;
 const uploadAvatar = async (data: FormData) => (await api.post('/uploads/avatar', data, {

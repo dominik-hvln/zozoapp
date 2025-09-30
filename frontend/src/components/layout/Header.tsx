@@ -59,10 +59,9 @@ const getUnreadNotificationsCount = async (): Promise<number> => {
 };
 
 export function Header() {
-    const pathname = usePathname();
     const { user, logout } = useAuthStore();
     const itemsInCart = useCartStore((state) => state.items.length);
-    const { data: profile, isLoading } = useQuery({ queryKey: ['profile'], queryFn: getProfile });
+    const { data: profile } = useQuery({ queryKey: ['profile'], queryFn: getProfile });
     const platform = Capacitor.getPlatform();
     const isNativeMobile = platform === 'ios' || platform === 'android';
 

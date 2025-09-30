@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Users, Sticker, ShoppingCart, Settings, Package, LogOut, ShieldCheck } from 'lucide-react';
+import { Home, Users, Sticker, ShoppingCart, Settings, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/auth.store';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -12,10 +12,6 @@ const links = [
     { href: '/panel/tatuaze', label: 'Aktywne Tatuaże', icon: Sticker },
     { href: '/panel/sklep', label: 'Sklep', icon: ShoppingCart },
 ];
-
-const bottomLinks = [
-    { href: '/panel/ustawienia', label: 'Ustawienia', icon: Settings },
-]
 
 export function Sidebar({ onLogout }: { onLogout?: () => void }) {
     const pathname = usePathname();

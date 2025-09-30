@@ -71,14 +71,6 @@ export default function DzieciPage() {
         onError: () => toast.error('Wystąpił błąd.'),
     });
 
-    const deleteMutation = useMutation({
-        mutationFn: deleteChild,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['children'] });
-            toast.success('Profil dziecka usunięty.');
-        },
-    });
-
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (formData.name.length < 2) {
@@ -98,18 +90,6 @@ export default function DzieciPage() {
         });
         setEditingChild(null);
     };
-
-    function openEditDialog(child: Child) {
-        setEditingChild(child);
-        setFormData({
-            name: child.name,
-            date_of_birth: child.date_of_birth ? new Date(child.date_of_birth) : undefined,
-            important_info: child.important_info || '',
-            illnesses: child.illnesses || '',
-            allergies: child.allergies || '',
-        });
-        setDialogOpen(true);
-    }
 
     function openNewDialog() {
         resetForm();

@@ -71,11 +71,6 @@ const shippingAddressSchema = z.object({
 type AppliedDiscount = { code: string; discount: { type: 'PERCENTAGE' | 'FIXED_AMOUNT'; value: number } };
 type ShippingAddress = z.infer<typeof shippingAddressSchema>;
 
-const productIcons: { [key: string]: StaticImageData } = {
-    'Apple': AppleIcon,
-    'Lemon': LemonIcon,
-};
-
 export default function KoszykPage() {
     const { items, removeItem, updateItemQuantity, clearCart } = useCartStore();
     const [promoCode, setPromoCode] = useState('');

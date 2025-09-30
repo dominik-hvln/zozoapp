@@ -11,7 +11,7 @@ import { useSocket } from '@/hooks/useSocket';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
 import { Header } from '@/components/layout/Header';
-import { PartyPopper, XCircle, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { App } from '@capacitor/app';
 import { cn } from '@/lib/utils';
 

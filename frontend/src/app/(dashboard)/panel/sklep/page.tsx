@@ -17,7 +17,6 @@ import { ShoppingCart, Search, List, LayoutGrid } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 
 import AppleIcon from '@/assets/avatars/apple.svg';
-import BananaIcon from '@/assets/avatars/banana.svg';
 
 const productImages: { [key: string]: StaticImageData } = {
     'Zestaw Tatuaży ZozoApp': AppleIcon,
@@ -49,7 +48,6 @@ function ProductCard({ product }: { product: Product }) {
     const [selectedVariantId, setSelectedVariantId] = useState<string | undefined>(product.product_variants[0]?.id);
     const addItemToCart = useCartStore((state) => state.addItem);
     const selectedVariant = product.product_variants.find(v => v.id === selectedVariantId);
-    const image = productImages[product.name] || AppleIcon;
 
     const handleAddToCart = () => {
         if (!selectedVariant) {

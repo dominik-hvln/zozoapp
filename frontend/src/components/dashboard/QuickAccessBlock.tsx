@@ -11,7 +11,7 @@ const getProfile = async () => (await api.get('/profile/me')).data;
 
 export function QuickAccessBlock() {
     const { user } = useAuthStore();
-    const { data: profile, isLoading } = useQuery({ queryKey: ['profile'], queryFn: getProfile });
+    const { data: profile } = useQuery({ queryKey: ['profile'], queryFn: getProfile });
 
     if (!user) return null;
 
