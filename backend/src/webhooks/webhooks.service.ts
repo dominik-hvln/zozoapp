@@ -62,62 +62,46 @@ export class WebhooksService {
 
     private async handleOneTimePayment(session: Stripe.Checkout.Session) {
         console.log(`[WEBHOOK] Rozpoczynam obsługę płatności jednorazowej dla sesji: ${session.id}`);
-        const userId = session.client_reference_id;
-
-        if (!userId || !session.amount_total) {
+        if (!session.amount_total) {
             console.error('[WEBHOOK BŁĄD] Brak kluczowych danych w sesji płatności!');
             return;
         }
 
-        // KROK 1: Sprawdź, czy zamówienie już istnieje (kluczowa zmiana!)
         const existingOrder = await this.prisma.orders.findUnique({
             where: { stripe_checkout_id: session.id },
         });
 
-        if (existingOrder) {
-            console.log(`[WEBHOOK] Zamówienie dla sesji ${session.id} już zostało przetworzone. Pomijam.`);
+        if (!existingOrder) {
+            console.error(`[WEBHOOK BŁĄD] Brak lokalnego zamówienia dla sesji ${session.id}.`);
+            return;
+        }
+
+        if (existingOrder.status === 'COMPLETED') {
+            console.log(`[WEBHOOK] Zamówienie ${existingOrder.id} jest już zakończone. Pomijam.`);
             return;
         }
 
         try {
-            const order = await this.prisma.orders.create({
+            const updatedOrder = await this.prisma.orders.update({
+                where: { id: existingOrder.id },
                 data: {
-                    user_id: userId,
-                    stripe_checkout_id: session.id,
+                    status: 'COMPLETED',
+                    total: session.amount_total,
                     total_amount: session.amount_total,
-                }
+                    stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
+                },
             });
-            console.log(`[WEBHOOK] Stworzono zamówienie w bazie: ${order.id}`);
 
-            const lineItems = await this.stripe.checkout.sessions.listLineItems(session.id);
-            for (const item of lineItems.data) {
-                if (item.price && item.price.id && item.quantity) {
-                    const variant = await this.prisma.product_variants.findUnique({
-                        where: { stripe_price_id: item.price.id }
-                    });
-                    if (variant) {
-                        await this.prisma.order_items.create({
-                            data: {
-                                order_id: order.id,
-                                product_variant_id: variant.id,
-                                quantity: item.quantity,
-                                price: variant.price,
-                            }
-                        });
-                    }
-                }
-            }
-            console.log(`[WEBHOOK] Zapisano pozycje dla zamówienia: ${order.id}`);
-
-            // Krok 4: Wyślij e-mail z potwierdzeniem
-            const user = await this.prisma.users.findUnique({ where: { id: userId } });
             const fullOrderDetails = await this.prisma.orders.findUnique({
-                where: { id: order.id },
-                include: { order_items: { include: { product_variants: { include: { products: true } } } } }
+                where: { id: updatedOrder.id },
+                include: {
+                    users: true,
+                    order_items: { include: { product_variants: { include: { products: true } } } },
+                },
             });
 
-            if (user && fullOrderDetails) {
-                await this.mailService.sendOrderConfirmationEmail(user.email, fullOrderDetails);
+            if (fullOrderDetails?.users?.email) {
+                await this.mailService.sendOrderConfirmationEmail(fullOrderDetails.users.email, fullOrderDetails);
             }
         } catch (error) {
             console.error('[WEBHOOK BŁĄD KRYTYCZNY] Nie udało się przetworzyć zamówienia:', error);

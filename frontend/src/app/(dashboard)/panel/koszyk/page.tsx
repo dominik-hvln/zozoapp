@@ -73,6 +73,13 @@ const shippingAddressSchema = z.object({
 
 type AppliedDiscount = { code: string; discount: { type: 'PERCENTAGE' | 'FIXED_AMOUNT'; value: number } };
 type ShippingAddress = z.infer<typeof shippingAddressSchema>;
+type CheckoutPayload = {
+    items: { priceId: string, quantity: number }[];
+    couponCode?: string;
+    customerEmail: string;
+    shippingMethodId: string;
+    shippingAddress: Omit<ShippingAddress, 'email'>;
+};
 
 export function KoszykPageContent() {
     const { items, removeItem, updateItemQuantity, clearCart } = useCartStore();
@@ -118,12 +125,7 @@ export function KoszykPageContent() {
     const total = subtotal + shippingCost - discountAmount;
 
     const checkoutMutation = useMutation({
-        mutationFn: (data: {
-            items: { priceId: string, quantity: number }[],
-            couponCode?: string,
-            shippingMethodId: string,
-            shippingAddress: ShippingAddress
-        }) => {
+        mutationFn: (data: CheckoutPayload) => {
             const platform = Capacitor.isNativePlatform() ? 'mobile' : 'web';
             return api.post('/store/checkout/payment', { ...data, platform });
         },
