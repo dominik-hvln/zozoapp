@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { StaticImageData } from 'next/image';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
+import { useEffect } from 'react';
 import { AxiosError } from 'axios';
 import { Capacitor } from '@capacitor/core';
 import { Browser } from '@capacitor/browser';
@@ -23,8 +24,10 @@ import { Trash2 } from 'lucide-react';
 import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
 import { ShippingSelector } from '@/components/cart/ShippingSelector';
+import { useAuthStore } from '@/store/auth.store';
 
 const shippingAddressSchema = z.object({
+    email: z.string().email('Wprowadź prawidłowy adres e-mail'),
     firstName: z.string()
         .min(2, 'Imię musi mieć minimum 2 znaki')
         .max(50, 'Imię może mieć maksymalnie 50 znaków')
@@ -73,6 +76,8 @@ type ShippingAddress = z.infer<typeof shippingAddressSchema>;
 
 export function KoszykPageContent() {
     const { items, removeItem, updateItemQuantity, clearCart } = useCartStore();
+    const { user } = useAuthStore();
+    const isLoggedIn = !!user?.email;
     const [promoCode, setPromoCode] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
 
@@ -84,6 +89,7 @@ export function KoszykPageContent() {
     const form = useForm<ShippingAddress>({
         resolver: zodResolver(shippingAddressSchema),
         defaultValues: {
+            email: user?.email || '',
             firstName: '',
             lastName: '',
             street: '',
@@ -92,6 +98,12 @@ export function KoszykPageContent() {
             phoneNumber: '',
         }
     });
+
+    useEffect(() => {
+        if (user?.email) {
+            form.setValue('email', user.email, { shouldValidate: true });
+        }
+    }, [form, user?.email]);
 
     const subtotal = useMemo(() => items.reduce((acc, item) => acc + (item.price * item.quantity), 0), [items]);
     const shippingCost = selectedShipping?.price ?? 0;
@@ -204,9 +216,15 @@ export function KoszykPageContent() {
         const checkoutData = {
             items: itemsForCheckout,
             couponCode: appliedDiscount?.code,
+            customerEmail: data.email,
             shippingMethodId: selectedShipping.id,
             shippingAddress: {
-                ...data,
+                firstName: data.firstName,
+                lastName: data.lastName,
+                street: data.street,
+                city: data.city,
+                postalCode: data.postalCode,
+                phoneNumber: data.phoneNumber,
             }
         };
 
@@ -280,6 +298,20 @@ export function KoszykPageContent() {
                         <Card>
                             <CardHeader><CardTitle>Adres Dostawy</CardTitle></CardHeader>
                             <CardContent className="space-y-4">
+                                <div className='grid gap-2'>
+                                    <Label htmlFor="email">Adres e-mail</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        {...form.register('email')}
+                                        readOnly={isLoggedIn}
+                                        className={form.formState.errors.email ? 'border-red-500' : ''}
+                                        placeholder="twoj@email.pl"
+                                    />
+                                    {form.formState.errors.email && (
+                                        <p className="text-red-500 text-sm mt-1">{form.formState.errors.email.message}</p>
+                                    )}
+                                </div>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className='grid gap-2'>
                                         <Label htmlFor="firstName">Imię</Label>

@@ -1,7 +1,21 @@
-import { Controller, Get, Post, Request, UseGuards, Body, Query, Req, Param } from '@nestjs/common';
+import { Controller, Get, Post, Request, UseGuards, Body, Query, Req, Param, Injectable, ExecutionContext } from '@nestjs/common';
 import { StoreService } from './store.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
+import { AuthGuard } from '@nestjs/passport';
+
+@Injectable()
+class OptionalJwtAuthGuard extends AuthGuard('jwt') {
+    canActivate(context: ExecutionContext) {
+        return super.canActivate(context);
+    }
+
+    handleRequest(err: unknown, user: unknown) {
+        if (err) {
+            return null;
+        }
+        return user ?? null;
+    }
+}
 
 class ShippingAddressDto {
     firstName: string;
@@ -16,6 +30,7 @@ class CreateCheckoutDto {
     items: { priceId: string, quantity: number }[];
     platform: 'web' | 'mobile';
     couponCode?: string;
+    customerEmail?: string;
     shippingMethodId: string;
     shippingAddress: ShippingAddressDto; // <-- DODANE POLE
 }
@@ -76,7 +91,7 @@ export class StoreController {
     }
 
     @Get('orders/public/by-session/:sessionId')
-    getPublicOrderBySessionId(@Param('sessionId') sessionId: string) {
-        return this.storeService.getAndUpdateOrderBySessionId(sessionId);
+    getPublicOrderBySessionId(@Param('sessionId') sessionId: string, @Query('token') token?: string) {
+        return this.storeService.getAndUpdateOrderBySessionId(sessionId, undefined, token);
     }
 }

@@ -2,8 +2,8 @@ import { Injectable, InternalServerErrorException, NotFoundException, BadRequest
 import { PrismaService } from 'src/prisma/prisma.service';
 import Stripe from 'stripe';
 import { Prisma } from '@prisma/client';
-import { MailService } from 'src/mail/mail.service';
-import * as bcrypt from 'bcryptjs';
+import * as bcrypt from 'bcrypt';
+import { randomBytes } from 'crypto';
 
 // --- NOWA DEFINICJA DTO DLA ADRESU ---
 class ShippingAddressDto {
@@ -20,6 +20,7 @@ class CreateCheckoutDto {
     items: { priceId: string, quantity: number }[];
     platform: 'web' | 'mobile';
     couponCode?: string;
+    customerEmail?: string;
     shippingMethodId: string;
     shippingAddress: ShippingAddressDto; // <-- DODANE POLE
 }
@@ -28,7 +29,7 @@ class CreateCheckoutDto {
 export class StoreService {
     private stripe: Stripe;
 
-    constructor(private prisma: PrismaService, private mailService: MailService) {
+    constructor(private prisma: PrismaService) {
         const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
         if (!stripeSecretKey) {
             throw new InternalServerErrorException('Stripe secret key is not configured.');
@@ -137,10 +138,21 @@ export class StoreService {
 
 
     async createOneTimePaymentCheckoutSession(userId: string | null, checkoutDto: CreateCheckoutDto) {
-        const { items, platform, couponCode, shippingMethodId, shippingAddress } = checkoutDto;
+        const { items, platform, couponCode, shippingMethodId, shippingAddress, customerEmail } = checkoutDto;
+        const normalizedCustomerEmail = customerEmail?.trim().toLowerCase();
+
+        if (!userId) {
+            if (!normalizedCustomerEmail) {
+                throw new BadRequestException('Adres e-mail jest wymagany dla zakupów bez logowania.');
+            }
+            if (!this.isValidEmail(normalizedCustomerEmail)) {
+                throw new BadRequestException('Podano nieprawidłowy adres e-mail.');
+            }
+        }
+
         const user = userId
             ? await this.prisma.users.findUnique({ where: { id: userId } })
-            : await this.createGuestUser(shippingAddress);
+            : await this.createGuestUser(shippingAddress, normalizedCustomerEmail as string);
 
         if (!user) {
             throw new NotFoundException('Nie udało się przygotować danych użytkownika do zamówienia.');
@@ -180,17 +192,21 @@ export class StoreService {
         const totalAmount = subtotal - discountAmount + shippingMethod.price;
 
         const line_items = items.map(item => ({ price: item.priceId, quantity: item.quantity }));
+        const publicOrderAccessToken = !userId ? randomBytes(24).toString('hex') : null;
         const webSuccessPath = userId ? '/panel/zamowienie/{CHECKOUT_SESSION_ID}' : '/zamowienie/{CHECKOUT_SESSION_ID}';
         const webCancelPath = userId ? '/panel/koszyk?status=cancel' : '/koszyk?status=cancel';
         const mobileSuccessPath = userId ? 'zozoapp://panel/zamowienie/{CHECKOUT_SESSION_ID}' : 'zozoapp://zamowienie/{CHECKOUT_SESSION_ID}';
         const mobileCancelPath = userId ? 'zozoapp://panel/koszyk?status=cancel' : 'zozoapp://koszyk?status=cancel';
-        const successUrl = platform === 'mobile' ? mobileSuccessPath : `${process.env.FRONTEND_URL}${webSuccessPath}`;
+        const successUrlSuffix = publicOrderAccessToken ? `?token=${publicOrderAccessToken}` : '';
+        const successUrl = platform === 'mobile'
+            ? `${mobileSuccessPath}${successUrlSuffix}`
+            : `${process.env.FRONTEND_URL}${webSuccessPath}${successUrlSuffix}`;
         const cancelUrl = platform === 'mobile' ? mobileCancelPath : `${process.env.FRONTEND_URL}${webCancelPath}`;
 
         const sessionPayload: Stripe.Checkout.SessionCreateParams = {
             ui_mode: 'hosted',
             mode: 'payment',
-            client_reference_id: userId,
+            client_reference_id: user.id,
             customer_email: user.email,
             line_items,
             shipping_options: [{ shipping_rate: shippingMethod.stripe_shipping_rate_id ?? undefined }],
@@ -215,7 +231,7 @@ export class StoreService {
 
         const newOrder = await this.prisma.orders.create({
             data: {
-                user_id: userId,
+                user_id: user.id,
                 shipping_address_id: newAddress.id,
                 shipping_method_id: shippingMethodId,
                 status: 'PENDING',
@@ -224,6 +240,7 @@ export class StoreService {
                 stripe_checkout_id: session.id,
                 stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
                 total_amount: totalAmount,
+                inpost_locker_data: publicOrderAccessToken ? { public_access_token: publicOrderAccessToken } : undefined,
             }
         });
 
@@ -247,14 +264,18 @@ export class StoreService {
         return { url: session.url };
     }
 
-    async getAndUpdateOrderBySessionId(sessionId: string, userId?: string) {
+    async getAndUpdateOrderBySessionId(sessionId: string, userId?: string, accessToken?: string) {
+        if (!userId && !accessToken) {
+            throw new BadRequestException('Brak tokenu dostępu do zamówienia.');
+        }
+
         const order = await this.prisma.orders.findFirst({
             where: {
                 stripe_checkout_id: sessionId,
                 ...(userId ? { user_id: userId } : {}),
             },
             include: {
-                users: true,
+                users: !!userId,
                 order_items: {
                     include: {
                         product_variants: { include: { products: true } },
@@ -265,6 +286,13 @@ export class StoreService {
 
         if (!order) {
             throw new NotFoundException('Nie znaleziono zamówienia dla podanej sesji.');
+        }
+
+        if (!userId) {
+            const storedToken = this.getOrderAccessToken(order.inpost_locker_data);
+            if (!storedToken || storedToken !== accessToken) {
+                throw new NotFoundException('Nie znaleziono zamówienia dla podanej sesji.');
+            }
         }
 
         if (order.status === 'COMPLETED') {
@@ -289,26 +317,24 @@ export class StoreService {
                 ...updatedOrderData, // Nadpisuje `status`, `total` etc. nowymi danymi
             };
 
-            if (finalOrder.users?.email) {
-                await this.mailService.sendOrderConfirmationEmail(finalOrder.users.email, finalOrder);
-            }
-
             return finalOrder;
         }
 
         return order;
     }
 
-    private async createGuestUser(shippingAddress: ShippingAddressDto) {
+    private async createGuestUser(shippingAddress: ShippingAddressDto, email: string) {
+        const existingUser = await this.prisma.users.findUnique({ where: { email } });
+        if (existingUser) {
+            return existingUser;
+        }
+
         const randomToken = Math.random().toString(36).slice(2, 10);
-        const normalizedFirstName = (shippingAddress.firstName || 'guest').trim().toLowerCase().replace(/\s+/g, '-');
-        const normalizedLastName = (shippingAddress.lastName || 'checkout').trim().toLowerCase().replace(/\s+/g, '-');
-        const guestEmail = `guest-${normalizedFirstName}-${normalizedLastName}-${Date.now()}-${randomToken}@zozoapp.local`;
         const passwordHash = await bcrypt.hash(`${Date.now()}-${randomToken}`, 10);
 
         return this.prisma.users.create({
             data: {
-                email: guestEmail,
+                email,
                 password_hash: passwordHash,
                 first_name: shippingAddress.firstName,
                 last_name: shippingAddress.lastName,
@@ -317,6 +343,18 @@ export class StoreService {
                 phone: shippingAddress.phoneNumber,
             },
         });
+    }
+
+    private isValidEmail(email: string) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    private getOrderAccessToken(data: unknown): string | null {
+        if (!data || typeof data !== 'object') {
+            return null;
+        }
+        const payload = data as Record<string, unknown>;
+        return typeof payload.public_access_token === 'string' ? payload.public_access_token : null;
     }
 
     async createCustomerPortalSession(userId: string) {
