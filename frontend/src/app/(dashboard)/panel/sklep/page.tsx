@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import { useState } from 'react';
 import { useDebounce } from 'use-debounce';
 import Image, { StaticImageData } from 'next/image';
-import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,7 +15,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { ShoppingCart, Search, List, LayoutGrid } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
-import { useAuthStore } from '@/store/auth.store';
 
 import AppleIcon from '@/assets/avatars/apple.svg';
 
@@ -108,9 +106,6 @@ function ProductCard({ product }: { product: Product }) {
 
 // --- GŁÓWNY KOMPONENT STRONY SKLEPU ---
 export function SklepPageContent() {
-    const { user } = useAuthStore();
-    const itemsInCart = useCartStore((state) => state.items.length);
-    const cartHref = user ? '/panel/koszyk' : '/koszyk';
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('name-asc');
     const [viewMode, setViewMode] = useState('grid');
@@ -122,21 +117,8 @@ export function SklepPageContent() {
     });
 
     return (
-        <div className="relative">
-            <div className="sticky top-4 z-20 flex justify-end mb-3">
-                <Link href={cartHref}>
-                    <Button variant="outline" size="icon" className="relative rounded-full bg-white shadow-sm">
-                        <ShoppingCart className="h-5 w-5" />
-                        {itemsInCart > 0 && (
-                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                                {itemsInCart}
-                            </span>
-                        )}
-                    </Button>
-                </Link>
-            </div>
-            <Card>
-                <CardContent>
+        <Card>
+            <CardContent>
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
                     <aside className="lg:col-span-1 sticky">
                         <ToggleGroup className="mb-6" type="single" value={viewMode} onValueChange={(value) => { if(value) setViewMode(value) }}>
@@ -186,9 +168,8 @@ export function SklepPageContent() {
                         )}
                     </main>
                 </div>
-                </CardContent>
-            </Card>
-        </div>
+            </CardContent>
+        </Card>
     );
 }
 
