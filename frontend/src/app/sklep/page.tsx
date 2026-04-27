@@ -30,7 +30,7 @@ export default function PublicSklepPage() {
           </Link>
         </div>
       </header>
-      <main className="container mx-auto p-4 lg:p-8">
+      <main className="container mx-auto p-4 md:p-6 lg:p-8">
         <SklepPageContent />
       </main>
     </div>
