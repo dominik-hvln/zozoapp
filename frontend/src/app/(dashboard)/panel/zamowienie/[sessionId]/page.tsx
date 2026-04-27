@@ -8,14 +8,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { PartyPopper } from 'lucide-react';
 
 const getOrderBySessionId = async (sessionId: string) => (await api.get(`/store/orders/by-session/${sessionId}`)).data;
+const getPublicOrderBySessionId = async (sessionId: string) => (await api.get(`/store/orders/public/by-session/${sessionId}`)).data;
 
-export default function OrderSummaryPage() {
+export function OrderSummaryPageContent({ isPublic = false }: { isPublic?: boolean }) {
     const params = useParams();
     const sessionId = params.sessionId as string;
 
     const { data: order, isLoading, isSuccess, error } = useQuery({
         queryKey: ['order-summary', sessionId],
-        queryFn: () => getOrderBySessionId(sessionId),
+        queryFn: () => (isPublic ? getPublicOrderBySessionId(sessionId) : getOrderBySessionId(sessionId)),
         enabled: !!sessionId,
         retry: 5,
         retryDelay: 1000,
@@ -45,4 +46,8 @@ export default function OrderSummaryPage() {
             </Card>
         </div>
     );
+}
+
+export default function OrderSummaryPage() {
+    return <OrderSummaryPageContent />;
 }

@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Request, UseGuards, Body, Query, Req, Param } from '@nestjs/common';
 import { StoreService } from './store.service';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from 'src/auth/guards/optional-jwt-auth.guard';
 
 class ShippingAddressDto {
     firstName: string;
@@ -23,7 +24,6 @@ class CreateCheckoutDto {
 export class StoreController {
     constructor(private readonly storeService: StoreService) {}
 
-    @UseGuards(JwtAuthGuard)
     @Get('products')
     getProducts(
         @Query('search') searchTerm?: string,
@@ -39,10 +39,10 @@ export class StoreController {
         return this.storeService.createSubscriptionCheckoutSession(req.user.userId, body.platform);
     }
 
-    @UseGuards(JwtAuthGuard)
     @Post('checkout/payment')
+    @UseGuards(OptionalJwtAuthGuard)
     createCheckoutSession(@Req() req: Request, @Body() checkoutDto: CreateCheckoutDto) {
-        const userId = (req as any).user.userId;
+        const userId = (req as any).user?.userId ?? null;
         return this.storeService.createOneTimePaymentCheckoutSession(userId, checkoutDto);
     }
 
@@ -52,13 +52,11 @@ export class StoreController {
         return this.storeService.createCustomerPortalSession(req.user.userId);
     }
 
-    @UseGuards(JwtAuthGuard)
     @Post('validate-promo')
     validatePromoCode(@Body('code') code: string) {
         return this.storeService.validatePromoCode(code);
     }
 
-    @UseGuards(JwtAuthGuard)
     @Get('shipping')
     getShipping() {
         return this.storeService.getActiveShippingMethods();
@@ -75,5 +73,10 @@ export class StoreController {
     getOrderBySessionId(@Param('sessionId') sessionId: string, @Req() req: Request) {
         const userId = (req as any).user.userId;
         return this.storeService.getAndUpdateOrderBySessionId(sessionId, userId);
+    }
+
+    @Get('orders/public/by-session/:sessionId')
+    getPublicOrderBySessionId(@Param('sessionId') sessionId: string) {
+        return this.storeService.getAndUpdateOrderBySessionId(sessionId);
     }
 }

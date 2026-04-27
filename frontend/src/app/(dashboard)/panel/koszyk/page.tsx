@@ -71,7 +71,7 @@ const shippingAddressSchema = z.object({
 type AppliedDiscount = { code: string; discount: { type: 'PERCENTAGE' | 'FIXED_AMOUNT'; value: number } };
 type ShippingAddress = z.infer<typeof shippingAddressSchema>;
 
-export default function KoszykPage() {
+export function KoszykPageContent() {
     const { items, removeItem, updateItemQuantity, clearCart } = useCartStore();
     const [promoCode, setPromoCode] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
@@ -526,4 +526,8 @@ export default function KoszykPage() {
             )}
         </div>
     );
+}
+
+export default function KoszykPage() {
+    return <KoszykPageContent />;
 }

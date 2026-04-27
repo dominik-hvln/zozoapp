@@ -105,7 +105,7 @@ function ProductCard({ product }: { product: Product }) {
 }
 
 // --- GŁÓWNY KOMPONENT STRONY SKLEPU ---
-export default function SklepPage() {
+export function SklepPageContent() {
     const [searchTerm, setSearchTerm] = useState('');
     const [sortBy, setSortBy] = useState('name-asc');
     const [viewMode, setViewMode] = useState('grid');
@@ -171,4 +171,8 @@ export default function SklepPage() {
             </CardContent>
         </Card>
     );
+}
+
+export default function SklepPage() {
+    return <SklepPageContent />;
 }

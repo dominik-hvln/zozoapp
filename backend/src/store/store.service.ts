@@ -3,6 +3,7 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import Stripe from 'stripe';
 import { Prisma } from '@prisma/client';
 import { MailService } from 'src/mail/mail.service';
+import * as bcrypt from 'bcryptjs';
 
 // --- NOWA DEFINICJA DTO DLA ADRESU ---
 class ShippingAddressDto {
@@ -135,11 +136,14 @@ export class StoreService {
     }
 
 
-    async createOneTimePaymentCheckoutSession(userId: string, checkoutDto: CreateCheckoutDto) {
+    async createOneTimePaymentCheckoutSession(userId: string | null, checkoutDto: CreateCheckoutDto) {
         const { items, platform, couponCode, shippingMethodId, shippingAddress } = checkoutDto;
-        const user = await this.prisma.users.findUnique({ where: { id: userId } });
-        if (!user || !user.stripe_customer_id) {
-            throw new NotFoundException('Użytkownik lub jego dane płatności nie zostały znalezione.');
+        const user = userId
+            ? await this.prisma.users.findUnique({ where: { id: userId } })
+            : await this.createGuestUser(shippingAddress);
+
+        if (!user) {
+            throw new NotFoundException('Nie udało się przygotować danych użytkownika do zamówienia.');
         }
 
         const shippingMethod = await this.prisma.shipping_methods.findUnique({
@@ -176,12 +180,12 @@ export class StoreService {
         const totalAmount = subtotal - discountAmount + shippingMethod.price;
 
         const line_items = items.map(item => ({ price: item.priceId, quantity: item.quantity }));
-        const successUrl = platform === 'mobile'
-            ? `zozoapp://panel/zamowienie/{CHECKOUT_SESSION_ID}`
-            : `${process.env.FRONTEND_URL}/panel/zamowienie/{CHECKOUT_SESSION_ID}`;
-        const cancelUrl = platform === 'mobile'
-            ? `zozoapp://panel/koszyk?status=cancel`
-            : `${process.env.FRONTEND_URL}/panel/koszyk?status=cancel`;
+        const webSuccessPath = userId ? '/panel/zamowienie/{CHECKOUT_SESSION_ID}' : '/zamowienie/{CHECKOUT_SESSION_ID}';
+        const webCancelPath = userId ? '/panel/koszyk?status=cancel' : '/koszyk?status=cancel';
+        const mobileSuccessPath = userId ? 'zozoapp://panel/zamowienie/{CHECKOUT_SESSION_ID}' : 'zozoapp://zamowienie/{CHECKOUT_SESSION_ID}';
+        const mobileCancelPath = userId ? 'zozoapp://panel/koszyk?status=cancel' : 'zozoapp://koszyk?status=cancel';
+        const successUrl = platform === 'mobile' ? mobileSuccessPath : `${process.env.FRONTEND_URL}${webSuccessPath}`;
+        const cancelUrl = platform === 'mobile' ? mobileCancelPath : `${process.env.FRONTEND_URL}${webCancelPath}`;
 
         const sessionPayload: Stripe.Checkout.SessionCreateParams = {
             ui_mode: 'hosted',
@@ -243,11 +247,11 @@ export class StoreService {
         return { url: session.url };
     }
 
-    async getAndUpdateOrderBySessionId(sessionId: string, userId: string) {
+    async getAndUpdateOrderBySessionId(sessionId: string, userId?: string) {
         const order = await this.prisma.orders.findFirst({
             where: {
                 stripe_checkout_id: sessionId,
-                user_id: userId,
+                ...(userId ? { user_id: userId } : {}),
             },
             include: {
                 users: true,
@@ -293,6 +297,26 @@ export class StoreService {
         }
 
         return order;
+    }
+
+    private async createGuestUser(shippingAddress: ShippingAddressDto) {
+        const randomToken = Math.random().toString(36).slice(2, 10);
+        const normalizedFirstName = (shippingAddress.firstName || 'guest').trim().toLowerCase().replace(/\s+/g, '-');
+        const normalizedLastName = (shippingAddress.lastName || 'checkout').trim().toLowerCase().replace(/\s+/g, '-');
+        const guestEmail = `guest-${normalizedFirstName}-${normalizedLastName}-${Date.now()}-${randomToken}@zozoapp.local`;
+        const passwordHash = await bcrypt.hash(`${Date.now()}-${randomToken}`, 10);
+
+        return this.prisma.users.create({
+            data: {
+                email: guestEmail,
+                password_hash: passwordHash,
+                first_name: shippingAddress.firstName,
+                last_name: shippingAddress.lastName,
+                role: 'USER',
+                account_status: 'TRIAL',
+                phone: shippingAddress.phoneNumber,
+            },
+        });
     }
 
     async createCustomerPortalSession(userId: string) {
