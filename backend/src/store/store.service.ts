@@ -273,10 +273,10 @@ export class StoreService {
                 total_amount: totalAmount,
                 inpost_locker_name: inpostLocker?.name,
                 inpost_locker_address: inpostLocker?.address,
-                inpost_locker_data: {
+                inpost_locker_data: this.toPrismaJsonValue({
                     ...(publicOrderAccessToken ? { public_access_token: publicOrderAccessToken } : {}),
                     ...(inpostLocker ? { selected_point: inpostLocker } : {}),
-                },
+                }),
             }
         });
 
@@ -539,10 +539,14 @@ export class StoreService {
         await this.prisma.orders.update({
             where: { id: orderId },
             data: {
-                inpost_locker_data: merged,
+                inpost_locker_data: this.toPrismaJsonValue(merged),
             },
         });
         return merged;
+    }
+
+    private toPrismaJsonValue(value: unknown): Prisma.InputJsonValue {
+        return JSON.parse(JSON.stringify(value ?? {})) as Prisma.InputJsonValue;
     }
 
     async createCustomerPortalSession(userId: string) {

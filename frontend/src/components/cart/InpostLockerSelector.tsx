@@ -8,19 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { api } from '@/lib/api';
 
-declare global {
-  namespace JSX {
-    interface IntrinsicElements {
-      'inpost-geowidget': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        token?: string;
-        language?: string;
-        config?: string;
-        onpoint?: string;
-      };
-    }
-  }
-}
-
 export type InpostPoint = {
   name: string;
   address?: {
@@ -123,12 +110,12 @@ export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
 
         {isWidgetOpen && geowidgetToken ? (
           <div className="rounded-md border p-2">
-            <inpost-geowidget
-              onpoint="onpointselect"
-              token={geowidgetToken}
-              language="pl"
-              config="parcelCollect"
-            />
+            {React.createElement('inpost-geowidget', {
+              onpoint: 'onpointselect',
+              token: geowidgetToken,
+              language: 'pl',
+              config: 'parcelCollect',
+            })}
           </div>
         ) : null}
 
