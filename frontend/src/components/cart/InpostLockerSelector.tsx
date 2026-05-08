@@ -1,7 +1,7 @@
 'use client';
 
 import Script from 'next/script';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,7 +32,7 @@ type InpostPointsResponse = {
 
 export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
-  const widgetContainerRef = useRef<HTMLDivElement | null>(null);
+  const [widgetContainer, setWidgetContainer] = useState<HTMLDivElement | null>(null);
   const geowidgetToken = process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN ?? '';
   const sanitizedPostalCode = (postalCode ?? '').trim();
   const { data: pointsData, isLoading: isPointsLoading } = useQuery({
@@ -69,23 +69,23 @@ export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
   }, [onChange]);
 
   useEffect(() => {
-    if (!widgetContainerRef.current) {
+    if (!widgetContainer) {
       return;
     }
 
     if (!isWidgetOpen || !geowidgetToken) {
-      widgetContainerRef.current.innerHTML = '';
+      widgetContainer.innerHTML = '';
       return;
     }
 
-    widgetContainerRef.current.innerHTML = '';
+    widgetContainer.innerHTML = '';
     const widget = document.createElement('inpost-geowidget');
     widget.setAttribute('onpoint', 'onpointselect');
     widget.setAttribute('token', geowidgetToken);
     widget.setAttribute('language', 'pl');
     widget.setAttribute('config', 'parcelCollect');
-    widgetContainerRef.current.appendChild(widget);
-  }, [isWidgetOpen, geowidgetToken]);
+    widgetContainer.appendChild(widget);
+  }, [isWidgetOpen, geowidgetToken, widgetContainer]);
 
   const selectedLabel = useMemo(() => {
     if (!value) {
@@ -134,7 +134,7 @@ export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
               <DialogTitle>Wybierz Paczkomat InPost</DialogTitle>
             </DialogHeader>
             <div className="rounded-md border p-2">
-              <div ref={widgetContainerRef} />
+              <div ref={setWidgetContainer} className="min-h-[560px]" />
             </div>
           </DialogContent>
         </Dialog>
