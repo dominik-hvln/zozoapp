@@ -153,32 +153,11 @@ export class AdminService {
                         quantity: 'asc',
                     },
                 },
-                categories: true,
             },
-        }).catch(async (error) => {
-            // Fallback for partially restored databases where M2M category relation is missing.
-            console.error('[ADMIN][PRODUCTS] Primary query failed, falling back without categories:', error?.message ?? error);
-            const products = await this.prisma.products.findMany({
-                where: {
-                    is_deleted: false,
-                },
-                orderBy: { created_at: 'desc' },
-                include: {
-                    product_variants: {
-                        where: {
-                            is_deleted: false,
-                        },
-                        orderBy: {
-                            quantity: 'asc',
-                        },
-                    },
-                },
-            });
-            return products.map((product) => ({
-                ...product,
-                categories: [],
-            }));
-        });
+        }).then((products) => products.map((product) => ({
+            ...product,
+            categories: [],
+        })));
     }
 
     async createProduct(data: { name: string, description?: string, categoryIds?: string[] }) {
@@ -186,15 +165,11 @@ export class AdminService {
             name: data.name,
             description: data.description,
         });
-
         return this.prisma.products.create({
             data: {
                 name: data.name,
                 description: data.description,
                 stripe_product_id: stripeProduct.id,
-                categories: {
-                    connect: data.categoryIds?.map(id => ({ id })) || [],
-                },
             },
         });
     }
@@ -206,9 +181,6 @@ export class AdminService {
                 name: data.name,
                 description: data.description,
                 is_active: data.isActive,
-                categories: {
-                    set: data.categoryIds?.map(id => ({ id })) || [],
-                },
             },
         });
     }

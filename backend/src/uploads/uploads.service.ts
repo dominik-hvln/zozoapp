@@ -5,11 +5,15 @@ import { PrismaService } from 'src/prisma/prisma.service';
 @Injectable()
 export class UploadsService {
     private supabase: SupabaseClient;
+    private readonly bucketName: string;
     constructor(private prisma: PrismaService) {
-        if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
-            throw new InternalServerErrorException('Supabase URL or Anon Key not configured.');
+        const supabaseUrl = process.env.SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
+        if (!supabaseUrl || !supabaseKey) {
+            throw new InternalServerErrorException('Supabase URL or key not configured.');
         }
-        this.supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+        this.supabase = createClient(supabaseUrl, supabaseKey);
+        this.bucketName = process.env.SUPABASE_STORAGE_BUCKET || 'avatars';
     }
 
     async uploadAvatar(file: Express.Multer.File, userId: string, childId?: string) {
@@ -17,16 +21,18 @@ export class UploadsService {
         const filePath = `${userId}/${childId || 'profile'}-${Date.now()}`;
 
         const { data, error } = await this.supabase.storage
-            .from('avatars')
+            .from(this.bucketName)
             .upload(filePath, file.buffer, {
                 contentType: file.mimetype,
+                upsert: true,
             });
 
         if (error) {
-            throw new InternalServerErrorException('Nie udało się wgrać awatara.');
+            console.error('[UPLOAD][AVATAR] Supabase upload error:', error);
+            throw new InternalServerErrorException(`Nie udało się wgrać awatara: ${error.message}`);
         }
 
-        const { data: { publicUrl } } = this.supabase.storage.from('avatars').getPublicUrl(data.path);
+        const { data: { publicUrl } } = this.supabase.storage.from(this.bucketName).getPublicUrl(data.path);
 
         if (childId) {
             await this.prisma.children.updateMany({
@@ -47,14 +53,15 @@ export class UploadsService {
         const filePath = `products/${productId}-${Date.now()}`;
 
         const { data, error } = await this.supabase.storage
-            .from('avatars') // Możemy używać tego samego "koszyka" (bucket)
-            .upload(filePath, file.buffer, { contentType: file.mimetype });
+            .from(this.bucketName)
+            .upload(filePath, file.buffer, { contentType: file.mimetype, upsert: true });
 
         if (error) {
-            throw new InternalServerErrorException('Nie udało się wgrać zdjęcia produktu.');
+            console.error('[UPLOAD][PRODUCT] Supabase upload error:', error);
+            throw new InternalServerErrorException(`Nie udało się wgrać zdjęcia produktu: ${error.message}`);
         }
 
-        const { data: { publicUrl } } = this.supabase.storage.from('avatars').getPublicUrl(data.path);
+        const { data: { publicUrl } } = this.supabase.storage.from(this.bucketName).getPublicUrl(data.path);
 
         await this.prisma.products.update({
             where: { id: productId },
