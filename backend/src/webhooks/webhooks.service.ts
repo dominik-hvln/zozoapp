@@ -191,6 +191,9 @@ export class WebhooksService {
 
         const lockerId = order.shipping_addresses?.inpost_locker_id ?? undefined;
         const isLockerDelivery = this.isInpostLockerShipping(order.shipping_methods?.integration_type, order.shipping_methods?.name);
+        const normalizedTargetPoint = this.normalizeShipxTargetPoint(lockerId);
+        const senderPhone = this.normalizeShipxPhone(process.env.INPOST_SENDER_PHONE);
+        const receiverPhone = this.normalizeShipxPhone(order.shipping_addresses?.phone_number ?? order.users?.phone ?? '');
         if (isLockerDelivery && !lockerId) {
             await this.prisma.orders.update({
                 where: { id: order.id },
@@ -198,6 +201,32 @@ export class WebhooksService {
                     inpost_locker_data: {
                         ...(order.inpost_locker_data && typeof order.inpost_locker_data === 'object' ? order.inpost_locker_data as object : {}),
                         shipment_error: 'Brak identyfikatora paczkomatu dla zamówienia InPost.',
+                        shipment_error_at: new Date().toISOString(),
+                    },
+                },
+            });
+            return;
+        }
+        if (!senderPhone) {
+            await this.prisma.orders.update({
+                where: { id: order.id },
+                data: {
+                    inpost_locker_data: {
+                        ...(order.inpost_locker_data && typeof order.inpost_locker_data === 'object' ? order.inpost_locker_data as object : {}),
+                        shipment_error: 'Nieprawidłowy INPOST_SENDER_PHONE (wymagane 9 cyfr PL).',
+                        shipment_error_at: new Date().toISOString(),
+                    },
+                },
+            });
+            return;
+        }
+        if (isLockerDelivery && !normalizedTargetPoint) {
+            await this.prisma.orders.update({
+                where: { id: order.id },
+                data: {
+                    inpost_locker_data: {
+                        ...(order.inpost_locker_data && typeof order.inpost_locker_data === 'object' ? order.inpost_locker_data as object : {}),
+                        shipment_error: 'Nieprawidłowy identyfikator paczkomatu (target_point).',
                         shipment_error_at: new Date().toISOString(),
                     },
                 },
@@ -212,7 +241,7 @@ export class WebhooksService {
                 first_name: order.shipping_addresses?.first_name ?? order.users?.first_name ?? 'Klient',
                 last_name: order.shipping_addresses?.last_name ?? order.users?.last_name ?? 'Zozo',
                 email: order.users?.email,
-                phone: order.shipping_addresses?.phone_number ?? order.users?.phone ?? '',
+                phone: receiverPhone ?? senderPhone,
                 address: {
                     street: order.shipping_addresses?.street,
                     building_number: '1',
@@ -226,7 +255,7 @@ export class WebhooksService {
                 first_name: process.env.INPOST_SENDER_FIRST_NAME,
                 last_name: process.env.INPOST_SENDER_LAST_NAME,
                 email: process.env.INPOST_SENDER_EMAIL,
-                phone: process.env.INPOST_SENDER_PHONE,
+                phone: senderPhone,
                 address: {
                     street: process.env.INPOST_SENDER_STREET,
                     building_number: process.env.INPOST_SENDER_BUILDING_NUMBER,
@@ -240,7 +269,7 @@ export class WebhooksService {
                     template: process.env.INPOST_DEFAULT_TEMPLATE ?? 'small',
                 },
             ],
-            custom_attributes: isLockerDelivery ? { target_point: lockerId } : {},
+            custom_attributes: isLockerDelivery ? { target_point: normalizedTargetPoint } : {},
         };
 
         try {
@@ -339,5 +368,27 @@ export class WebhooksService {
         }
         const methodName = (fallbackName ?? '').toLowerCase();
         return methodName.includes('paczkomat');
+    }
+
+    private normalizeShipxPhone(phone?: string | null) {
+        const digits = (phone ?? '').replace(/\D/g, '');
+        if (!digits) return null;
+        if (digits.startsWith('48') && digits.length === 11) return digits.slice(2);
+        if (digits.length === 9) return digits;
+        return null;
+    }
+
+    private normalizeShipxTargetPoint(rawValue?: string | null) {
+        const value = (rawValue ?? '').trim().toUpperCase();
+        if (!value) return null;
+        const matches = value.match(/[A-Z]{3}[A-Z0-9]{2,10}/g);
+        if (matches?.length) {
+            return matches[0];
+        }
+        const compact = value.replace(/[^A-Z0-9]/g, '');
+        if (compact.length >= 5 && compact.length <= 14) {
+            return compact;
+        }
+        return null;
     }
 }

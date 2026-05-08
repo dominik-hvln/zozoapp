@@ -571,7 +571,6 @@ export function KoszykPageContent() {
                                     <InpostLockerSelector
                                         value={selectedLocker}
                                         onChange={setSelectedLocker}
-                                        postalCode={form.watch('postalCode')}
                                     />
                                 ) : null}
                                 <Separator />

@@ -2,11 +2,9 @@
 
 import Script from 'next/script';
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { api } from '@/lib/api';
 
 export type InpostPoint = {
   name: string;
@@ -23,35 +21,12 @@ export type InpostPoint = {
 type Props = {
   value: InpostPoint | null;
   onChange: (point: InpostPoint | null) => void;
-  postalCode?: string;
 };
 
-type InpostPointsResponse = {
-  items?: InpostPoint[];
-};
-
-export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
+export function InpostLockerSelector({ value, onChange }: Props) {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [widgetContainer, setWidgetContainer] = useState<HTMLDivElement | null>(null);
   const geowidgetToken = process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN ?? '';
-  const sanitizedPostalCode = (postalCode ?? '').trim();
-  const { data: pointsData, isLoading: isPointsLoading } = useQuery({
-    queryKey: ['inpost-points-fallback', sanitizedPostalCode],
-    queryFn: async (): Promise<InpostPointsResponse> => {
-      const response = await api.get('/store/inpost/points', {
-        params: {
-          relative_post_code: sanitizedPostalCode,
-          functions: 'parcel_collect',
-          type: 'parcel_locker',
-          sort_by: 'distance_to_relative_point',
-          per_page: 20,
-        },
-      });
-      return response.data;
-    },
-    enabled: /^\d{2}-\d{3}$/.test(sanitizedPostalCode),
-    staleTime: 5 * 60 * 1000,
-  });
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -147,33 +122,6 @@ export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
             min-height: 560px;
           }
         `}</style>
-
-        <div className="space-y-2">
-          <p className="text-sm font-medium">Fallback: lista punktów</p>
-          {!/^\d{2}-\d{3}$/.test(sanitizedPostalCode) ? (
-            <p className="text-xs text-muted-foreground">Wpisz poprawny kod pocztowy, aby załadować listę paczkomatów.</p>
-          ) : isPointsLoading ? (
-            <p className="text-xs text-muted-foreground">Ładowanie punktów...</p>
-          ) : pointsData?.items?.length ? (
-            <div className="max-h-56 space-y-2 overflow-auto rounded-md border p-2">
-              {pointsData.items.map((point) => (
-                <button
-                  key={point.name}
-                  type="button"
-                  className="w-full rounded border p-2 text-left hover:bg-muted"
-                  onClick={() => onChange(point)}
-                >
-                  <p className="text-sm font-semibold">{point.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {point.address?.line1} {point.address?.line2}
-                  </p>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-muted-foreground">Brak punktów dla podanego kodu pocztowego.</p>
-          )}
-        </div>
       </CardContent>
     </Card>
   );

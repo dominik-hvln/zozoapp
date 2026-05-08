@@ -472,6 +472,15 @@ export class StoreService {
     private buildShipxShipmentPayload(order: any) {
         const isLockerDelivery = this.isInpostLockerShipping(order.shipping_methods?.integration_type, order.shipping_methods?.name);
         const service = isLockerDelivery ? 'inpost_locker_standard' : 'inpost_courier_standard';
+        const senderPhone = this.normalizeShipxPhone(process.env.INPOST_SENDER_PHONE);
+        if (!senderPhone) {
+            throw new InternalServerErrorException('Nieprawidłowy INPOST_SENDER_PHONE. Użyj polskiego numeru 9 cyfr (np. 500100200 lub +48...).');
+        }
+        const receiverPhone = this.normalizeShipxPhone(order.shipping_addresses?.phone_number ?? order.users?.phone ?? '');
+        const normalizedTargetPoint = this.normalizeShipxTargetPoint(order.shipping_addresses?.inpost_locker_id);
+        if (isLockerDelivery && !normalizedTargetPoint) {
+            throw new BadRequestException('Nieprawidłowy identyfikator paczkomatu (target_point). Wybierz punkt ponownie.');
+        }
         const receiverAddress = {
             street: order.shipping_addresses?.street,
             building_number: '1',
@@ -487,7 +496,7 @@ export class StoreService {
                 first_name: order.shipping_addresses?.first_name ?? order.users?.first_name ?? 'Klient',
                 last_name: order.shipping_addresses?.last_name ?? order.users?.last_name ?? 'Zozo',
                 email: order.users?.email,
-                phone: order.shipping_addresses?.phone_number ?? order.users?.phone ?? '',
+                phone: receiverPhone ?? senderPhone,
                 address: receiverAddress,
             },
             sender: {
@@ -495,7 +504,7 @@ export class StoreService {
                 first_name: process.env.INPOST_SENDER_FIRST_NAME,
                 last_name: process.env.INPOST_SENDER_LAST_NAME,
                 email: process.env.INPOST_SENDER_EMAIL,
-                phone: process.env.INPOST_SENDER_PHONE,
+                phone: senderPhone,
                 address: {
                     street: process.env.INPOST_SENDER_STREET,
                     building_number: process.env.INPOST_SENDER_BUILDING_NUMBER,
@@ -511,7 +520,7 @@ export class StoreService {
             ],
             custom_attributes: isLockerDelivery
                 ? {
-                    target_point: order.shipping_addresses?.inpost_locker_id,
+                    target_point: normalizedTargetPoint,
                 }
                 : {},
         };
@@ -794,5 +803,27 @@ export class StoreService {
         }
         const methodName = (fallbackName ?? '').toLowerCase();
         return methodName.includes('paczkomat');
+    }
+
+    private normalizeShipxPhone(phone?: string | null) {
+        const digits = (phone ?? '').replace(/\D/g, '');
+        if (!digits) return null;
+        if (digits.startsWith('48') && digits.length === 11) return digits.slice(2);
+        if (digits.length === 9) return digits;
+        return null;
+    }
+
+    private normalizeShipxTargetPoint(rawValue?: string | null) {
+        const value = (rawValue ?? '').trim().toUpperCase();
+        if (!value) return null;
+        const matches = value.match(/[A-Z]{3}[A-Z0-9]{2,10}/g);
+        if (matches?.length) {
+            return matches[0];
+        }
+        const compact = value.replace(/[^A-Z0-9]/g, '');
+        if (compact.length >= 5 && compact.length <= 14) {
+            return compact;
+        }
+        return null;
     }
 }
