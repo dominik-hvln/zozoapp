@@ -1,4 +1,4 @@
-import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import Stripe from 'stripe';
 import { Prisma } from '@prisma/client';
@@ -653,12 +653,21 @@ export class StoreService {
         }
 
         const labelType = acceptHeader?.toUpperCase() === 'A4' ? 'normal' : 'A6';
-
-        return this.inpostService.getShipmentLabel(
-            shipmentId,
-            'Pdf',
-            labelType,
-        );
+        try {
+            return await this.inpostService.getShipmentLabel(
+                shipmentId,
+                'Pdf',
+                labelType,
+            );
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            if (message.includes('shipment_status_incorrect') || message.includes('offer_selected')) {
+                const shipment = await this.inpostService.getShipmentById(shipmentId);
+                const status = this.extractShipmentStatus(shipment) ?? 'unknown';
+                throw new ConflictException(`Etykieta nie jest jeszcze dostępna w ShipX. Aktualny status przesyłki: ${status}. Odśwież status i spróbuj ponownie za chwilę.`);
+            }
+            throw error;
+        }
     }
 
     async createInpostShipmentForOrder(orderId: string) {
