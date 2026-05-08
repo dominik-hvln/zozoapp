@@ -134,10 +134,19 @@ export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
               <DialogTitle>Wybierz Paczkomat InPost</DialogTitle>
             </DialogHeader>
             <div className="rounded-md border p-2">
-              <div ref={setWidgetContainer} className="min-h-[560px]" />
+              <div ref={setWidgetContainer} className="h-[75vh] min-h-[560px] w-full" />
             </div>
           </DialogContent>
         </Dialog>
+
+        <style jsx global>{`
+          inpost-geowidget {
+            display: block;
+            width: 100%;
+            height: 100%;
+            min-height: 560px;
+          }
+        `}</style>
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Fallback: lista punktów</p>
