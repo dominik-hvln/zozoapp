@@ -144,14 +144,40 @@ export class AdminService {
                 is_deleted: false,
             },
             orderBy: { created_at: 'desc' },
-            include: { product_variants: {
+            include: {
+                product_variants: {
                     where: {
                         is_deleted: false,
                     },
                     orderBy: {
-                        quantity: 'asc'
+                        quantity: 'asc',
                     },
-                }, categories: true },
+                },
+                categories: true,
+            },
+        }).catch(async (error) => {
+            // Fallback for partially restored databases where M2M category relation is missing.
+            console.error('[ADMIN][PRODUCTS] Primary query failed, falling back without categories:', error?.message ?? error);
+            const products = await this.prisma.products.findMany({
+                where: {
+                    is_deleted: false,
+                },
+                orderBy: { created_at: 'desc' },
+                include: {
+                    product_variants: {
+                        where: {
+                            is_deleted: false,
+                        },
+                        orderBy: {
+                            quantity: 'asc',
+                        },
+                    },
+                },
+            });
+            return products.map((product) => ({
+                ...product,
+                categories: [],
+            }));
         });
     }
 
