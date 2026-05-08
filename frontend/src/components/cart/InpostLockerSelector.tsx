@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { api } from '@/lib/api';
 
 export type InpostPoint = {
@@ -68,7 +69,12 @@ export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
   }, [onChange]);
 
   useEffect(() => {
-    if (!isWidgetOpen || !geowidgetToken || !widgetContainerRef.current) {
+    if (!widgetContainerRef.current) {
+      return;
+    }
+
+    if (!isWidgetOpen || !geowidgetToken) {
+      widgetContainerRef.current.innerHTML = '';
       return;
     }
 
@@ -101,10 +107,10 @@ export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => setIsWidgetOpen((current) => !current)}
+            onClick={() => setIsWidgetOpen(true)}
             disabled={!geowidgetToken}
           >
-            {isWidgetOpen ? 'Ukryj mapę' : 'Wybierz na mapie'}
+            Wybierz na mapie
           </Button>
           {value ? (
             <Button type="button" variant="ghost" onClick={() => onChange(null)}>
@@ -122,11 +128,16 @@ export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
         <Script src="https://geowidget.inpost-group.com/inpost-geowidget.js" strategy="afterInteractive" />
         <link rel="stylesheet" href="https://geowidget.inpost-group.com/inpost-geowidget.css" />
 
-        {isWidgetOpen && geowidgetToken ? (
-          <div className="rounded-md border p-2">
-            <div ref={widgetContainerRef} />
-          </div>
-        ) : null}
+        <Dialog open={isWidgetOpen} onOpenChange={setIsWidgetOpen}>
+          <DialogContent className="max-w-[95vw] sm:max-w-5xl">
+            <DialogHeader>
+              <DialogTitle>Wybierz Paczkomat InPost</DialogTitle>
+            </DialogHeader>
+            <div className="rounded-md border p-2">
+              <div ref={widgetContainerRef} />
+            </div>
+          </DialogContent>
+        </Dialog>
 
         <div className="space-y-2">
           <p className="text-sm font-medium">Fallback: lista punktów</p>
