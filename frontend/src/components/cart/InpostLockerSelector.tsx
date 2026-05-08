@@ -1,8 +1,7 @@
 'use client';
 
 import Script from 'next/script';
-import { useEffect, useMemo, useState } from 'react';
-import React from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +31,7 @@ type InpostPointsResponse = {
 
 export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
+  const widgetContainerRef = useRef<HTMLDivElement | null>(null);
   const geowidgetToken = process.env.NEXT_PUBLIC_INPOST_GEOWIDGET_TOKEN ?? '';
   const sanitizedPostalCode = (postalCode ?? '').trim();
   const { data: pointsData, isLoading: isPointsLoading } = useQuery({
@@ -66,6 +66,20 @@ export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
       document.removeEventListener('onpointselect', handler);
     };
   }, [onChange]);
+
+  useEffect(() => {
+    if (!isWidgetOpen || !geowidgetToken || !widgetContainerRef.current) {
+      return;
+    }
+
+    widgetContainerRef.current.innerHTML = '';
+    const widget = document.createElement('inpost-geowidget');
+    widget.setAttribute('onpoint', 'onpointselect');
+    widget.setAttribute('token', geowidgetToken);
+    widget.setAttribute('language', 'pl');
+    widget.setAttribute('config', 'parcelCollect');
+    widgetContainerRef.current.appendChild(widget);
+  }, [isWidgetOpen, geowidgetToken]);
 
   const selectedLabel = useMemo(() => {
     if (!value) {
@@ -110,12 +124,7 @@ export function InpostLockerSelector({ value, onChange, postalCode }: Props) {
 
         {isWidgetOpen && geowidgetToken ? (
           <div className="rounded-md border p-2">
-            {React.createElement('inpost-geowidget', {
-              onpoint: 'onpointselect',
-              token: geowidgetToken,
-              language: 'pl',
-              config: 'parcelCollect',
-            })}
+            <div ref={widgetContainerRef} />
           </div>
         ) : null}
 

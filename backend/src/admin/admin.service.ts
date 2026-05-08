@@ -4,6 +4,8 @@ import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
 import Stripe from 'stripe';
 
+type ShippingIntegrationType = 'NONE' | 'INPOST_LOCKER' | 'INPOST_COURIER';
+
 @Injectable()
 export class AdminService {
     private stripe: Stripe;
@@ -361,7 +363,12 @@ export class AdminService {
         });
     }
 
-    async createShippingMethod(data: Omit<Prisma.shipping_methodsUncheckedCreateInput, 'id' | 'created_at' | 'stripe_shipping_rate_id'>) {
+    async createShippingMethod(data: {
+        name: string;
+        price: number;
+        is_active: boolean;
+        integration_type?: ShippingIntegrationType;
+    }) {
         // Krok 1: Stwórz stawkę dostawy w Stripe
         const shippingRate = await this.stripe.shippingRates.create({
             display_name: data.name,
@@ -376,12 +383,18 @@ export class AdminService {
         return this.prisma.shipping_methods.create({
             data: {
                 ...data,
+                integration_type: data.integration_type ?? 'NONE',
                 stripe_shipping_rate_id: shippingRate.id,
             },
         });
     }
 
-    async updateShippingMethod(id: string, data: Omit<Prisma.shipping_methodsUncheckedUpdateInput, 'id' | 'created_at' | 'stripe_shipping_rate_id'>) {
+    async updateShippingMethod(id: string, data: {
+        name: string;
+        price: number;
+        is_active: boolean;
+        integration_type?: ShippingIntegrationType;
+    }) {
         const existingMethod = await this.prisma.shipping_methods.findUnique({ where: { id } });
         if (!existingMethod) {
             throw new NotFoundException('Metoda dostawy nie została znaleziona.');
@@ -403,10 +416,30 @@ export class AdminService {
         return this.prisma.shipping_methods.update({
             where: { id },
             data: {
-                name: data.name as string,
-                price: data.price as number,
-                is_active: data.is_active as boolean,
+                name: data.name,
+                price: data.price,
+                is_active: data.is_active,
+                integration_type: data.integration_type ?? 'NONE',
                 stripe_shipping_rate_id: newShippingRate.id,
+            },
+        });
+    }
+
+    async deleteShippingMethod(id: string) {
+        const existingMethod = await this.prisma.shipping_methods.findUnique({ where: { id } });
+        if (!existingMethod) {
+            throw new NotFoundException('Metoda dostawy nie została znaleziona.');
+        }
+
+        if (existingMethod.stripe_shipping_rate_id) {
+            await this.stripe.shippingRates.update(existingMethod.stripe_shipping_rate_id, { active: false });
+        }
+
+        return this.prisma.shipping_methods.update({
+            where: { id },
+            data: {
+                is_active: false,
+                integration_type: 'NONE',
             },
         });
     }

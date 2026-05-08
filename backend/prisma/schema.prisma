@@ -206,6 +206,7 @@ model shipping_methods {
   name                    String   @unique
   price                   Int
   is_active               Boolean  @default(true)
+  integration_type        shipping_integration_type @default(NONE)
   stripe_shipping_rate_id String?
   created_at              DateTime @default(now()) @db.Timestamptz(6)
   orders                  orders[]
@@ -231,4 +232,10 @@ model shipping_addresses {
 enum discount_type {
   PERCENTAGE
   FIXED_AMOUNT
+}
+
+enum shipping_integration_type {
+  NONE
+  INPOST_LOCKER
+  INPOST_COURIER
 }

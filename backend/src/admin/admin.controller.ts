@@ -4,6 +4,8 @@ import { AdminService } from './admin.service';
 import { Response } from 'express';
 import { Prisma } from '@prisma/client';
 
+type ShippingIntegrationType = 'NONE' | 'INPOST_LOCKER' | 'INPOST_COURIER';
+
 @UseGuards(AdminGuard)
 @Controller('admin')
 export class AdminController {
@@ -119,12 +121,27 @@ export class AdminController {
     }
 
     @Post('shipping')
-    createShippingMethod(@Body() data: Prisma.shipping_methodsUncheckedCreateInput) {
+    createShippingMethod(@Body() data: {
+        name: string;
+        price: number;
+        is_active: boolean;
+        integration_type?: ShippingIntegrationType;
+    }) {
         return this.adminService.createShippingMethod(data);
     }
 
     @Put('shipping/:id')
-    updateShippingMethod(@Param('id') id: string, @Body() data: Prisma.shipping_methodsUncheckedUpdateInput) {
+    updateShippingMethod(@Param('id') id: string, @Body() data: {
+        name: string;
+        price: number;
+        is_active: boolean;
+        integration_type?: ShippingIntegrationType;
+    }) {
         return this.adminService.updateShippingMethod(id, data);
+    }
+
+    @Delete('shipping/:id')
+    deleteShippingMethod(@Param('id') id: string) {
+        return this.adminService.deleteShippingMethod(id);
     }
 }

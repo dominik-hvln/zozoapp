@@ -12,6 +12,7 @@ export type ShippingMethod = {
     name: string;
     price: number;       // grosze
     is_active: boolean;
+    integration_type: 'NONE' | 'INPOST_LOCKER' | 'INPOST_COURIER';
 };
 
 type Props = {

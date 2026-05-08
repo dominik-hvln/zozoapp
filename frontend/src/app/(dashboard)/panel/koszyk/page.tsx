@@ -212,7 +212,7 @@ export function KoszykPageContent() {
             toast.error('Wybierz metodę dostawy');
             return;
         }
-        const requiresLocker = selectedShipping.name.toLowerCase().includes('paczkomat');
+        const requiresLocker = selectedShipping.integration_type === 'INPOST_LOCKER';
         if (requiresLocker && !selectedLocker?.name) {
             toast.error('Wybierz paczkomat InPost na mapie.');
             return;
@@ -567,7 +567,7 @@ export function KoszykPageContent() {
                                     selectedId={selectedShipping?.id ?? null}
                                     onChange={(method) => setSelectedShipping(method)}
                                 />
-                                {selectedShipping?.name.toLowerCase().includes('paczkomat') ? (
+                                {selectedShipping?.integration_type === 'INPOST_LOCKER' ? (
                                     <InpostLockerSelector
                                         value={selectedLocker}
                                         onChange={setSelectedLocker}

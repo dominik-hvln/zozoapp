@@ -5,6 +5,8 @@ import { EventsGateway } from 'src/events/events.gateway';
 import { MailService } from 'src/mail/mail.service';
 import { InpostService } from 'src/store/inpost.service';
 
+type ShippingIntegrationType = 'NONE' | 'INPOST_LOCKER' | 'INPOST_COURIER';
+
 @Injectable()
 export class WebhooksService {
     private stripe: Stripe;
@@ -177,8 +179,7 @@ export class WebhooksService {
     }
 
     private async tryCreateInpostShipment(order: any) {
-        const shippingMethodName = (order.shipping_methods?.name ?? '').toLowerCase();
-        if (!shippingMethodName.includes('inpost')) {
+        if (!this.isInpostShipping(order.shipping_methods?.integration_type, order.shipping_methods?.name)) {
             return;
         }
 
@@ -189,7 +190,7 @@ export class WebhooksService {
         }
 
         const lockerId = order.shipping_addresses?.inpost_locker_id ?? undefined;
-        const isLockerDelivery = shippingMethodName.includes('paczkomat');
+        const isLockerDelivery = this.isInpostLockerShipping(order.shipping_methods?.integration_type, order.shipping_methods?.name);
         if (isLockerDelivery && !lockerId) {
             await this.prisma.orders.update({
                 where: { id: order.id },
@@ -322,5 +323,21 @@ export class WebhooksService {
             return 'IN_TRANSIT';
         }
         return 'UNKNOWN';
+    }
+
+    private isInpostShipping(integrationType?: ShippingIntegrationType | null, fallbackName?: string | null) {
+        if (integrationType && integrationType !== 'NONE') {
+            return integrationType === 'INPOST_LOCKER' || integrationType === 'INPOST_COURIER';
+        }
+        const methodName = (fallbackName ?? '').toLowerCase();
+        return methodName.includes('inpost');
+    }
+
+    private isInpostLockerShipping(integrationType?: ShippingIntegrationType | null, fallbackName?: string | null) {
+        if (integrationType && integrationType !== 'NONE') {
+            return integrationType === 'INPOST_LOCKER';
+        }
+        const methodName = (fallbackName ?? '').toLowerCase();
+        return methodName.includes('paczkomat');
     }
 }

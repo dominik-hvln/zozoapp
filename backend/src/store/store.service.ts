@@ -43,6 +43,8 @@ type InpostDataPayload = {
     inpostShipmentStatus?: string;
 };
 
+type ShippingIntegrationType = 'NONE' | 'INPOST_LOCKER' | 'INPOST_COURIER';
+
 @Injectable()
 export class StoreService {
     private stripe: Stripe;
@@ -153,7 +155,7 @@ export class StoreService {
     async getActiveShippingMethods() {
         return this.prisma.shipping_methods.findMany({
             where: { is_active: true },
-            select: { id: true, name: true, price: true, is_active: true },
+            select: { id: true, name: true, price: true, is_active: true, integration_type: true },
             orderBy: { price: 'asc' },
         });
     }
@@ -186,7 +188,7 @@ export class StoreService {
         if (!shippingMethod) {
             throw new BadRequestException('Wybrana metoda dostawy jest nieprawidłowa.');
         }
-        const requiresInpostLocker = shippingMethod.name.toLowerCase().includes('paczkomat');
+        const requiresInpostLocker = this.isInpostLockerShipping(shippingMethod.integration_type, shippingMethod.name);
         if (requiresInpostLocker && !inpostLocker?.id) {
             throw new BadRequestException('Dla dostawy do paczkomatu wybierz punkt odbioru.');
         }
@@ -468,8 +470,7 @@ export class StoreService {
     }
 
     private buildShipxShipmentPayload(order: any) {
-        const methodName = (order.shipping_methods?.name ?? '').toLowerCase();
-        const isLockerDelivery = methodName.includes('paczkomat');
+        const isLockerDelivery = this.isInpostLockerShipping(order.shipping_methods?.integration_type, order.shipping_methods?.name);
         const service = isLockerDelivery ? 'inpost_locker_standard' : 'inpost_courier_standard';
         const receiverAddress = {
             street: order.shipping_addresses?.street,
@@ -653,12 +654,11 @@ export class StoreService {
 
     async createInpostShipmentForOrder(orderId: string) {
         const order = await this.getOrderForInpostActions(orderId);
-        const methodName = (order.shipping_methods?.name ?? '').toLowerCase();
-        if (!methodName.includes('inpost')) {
+        if (!this.isInpostShipping(order.shipping_methods?.integration_type, order.shipping_methods?.name)) {
             throw new BadRequestException('To zamówienie nie używa dostawy InPost.');
         }
 
-        const isLockerDelivery = methodName.includes('paczkomat');
+        const isLockerDelivery = this.isInpostLockerShipping(order.shipping_methods?.integration_type, order.shipping_methods?.name);
         if (isLockerDelivery && !order.shipping_addresses?.inpost_locker_id) {
             throw new BadRequestException('Brak wybranego paczkomatu dla zamówienia.');
         }
@@ -778,5 +778,21 @@ export class StoreService {
         }, order.inpost_locker_data);
 
         return { dispatchOrder, inpostData };
+    }
+
+    private isInpostShipping(integrationType?: ShippingIntegrationType | null, fallbackName?: string | null) {
+        if (integrationType && integrationType !== 'NONE') {
+            return integrationType === 'INPOST_LOCKER' || integrationType === 'INPOST_COURIER';
+        }
+        const methodName = (fallbackName ?? '').toLowerCase();
+        return methodName.includes('inpost');
+    }
+
+    private isInpostLockerShipping(integrationType?: ShippingIntegrationType | null, fallbackName?: string | null) {
+        if (integrationType && integrationType !== 'NONE') {
+            return integrationType === 'INPOST_LOCKER';
+        }
+        const methodName = (fallbackName ?? '').toLowerCase();
+        return methodName.includes('paczkomat');
     }
 }
