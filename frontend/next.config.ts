@@ -25,6 +25,12 @@ const nextConfig: NextConfig = {
                 port: '',
                 pathname: '/storage/v1/object/public/**',
             },
+            {
+                protocol: 'https',
+                hostname: 'supabase-api.zozoapp.pl',
+                port: '',
+                pathname: '/storage/v1/object/public/**',
+            },
         ],
     },
 };
