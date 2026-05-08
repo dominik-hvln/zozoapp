@@ -25,6 +25,8 @@ import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
 import { ShippingSelector } from '@/components/cart/ShippingSelector';
 import { useAuthStore } from '@/store/auth.store';
+import { InpostLockerSelector, type InpostPoint } from '@/components/cart/InpostLockerSelector';
+import { type ShippingMethod } from '@/components/cart/ShippingSelector';
 
 const shippingAddressSchema = z.object({
     email: z.string().email('Wprowadź prawidłowy adres e-mail'),
@@ -79,6 +81,14 @@ type CheckoutPayload = {
     customerEmail: string;
     shippingMethodId: string;
     shippingAddress: Omit<ShippingAddress, 'email'>;
+    inpostLocker?: {
+        id: string;
+        name?: string;
+        address?: string;
+        postcode?: string;
+        city?: string;
+        raw?: unknown;
+    };
 };
 
 export function KoszykPageContent() {
@@ -88,10 +98,8 @@ export function KoszykPageContent() {
     const [promoCode, setPromoCode] = useState('');
     const [appliedDiscount, setAppliedDiscount] = useState<AppliedDiscount | null>(null);
 
-    const [selectedShipping, setSelectedShipping] = useState<{
-        id: string;
-        price: number;
-    } | null>(null);
+    const [selectedShipping, setSelectedShipping] = useState<ShippingMethod | null>(null);
+    const [selectedLocker, setSelectedLocker] = useState<InpostPoint | null>(null);
 
     const form = useForm<ShippingAddress>({
         resolver: zodResolver(shippingAddressSchema),
@@ -204,6 +212,11 @@ export function KoszykPageContent() {
             toast.error('Wybierz metodę dostawy');
             return;
         }
+        const requiresLocker = selectedShipping.name.toLowerCase().includes('paczkomat');
+        if (requiresLocker && !selectedLocker?.name) {
+            toast.error('Wybierz paczkomat InPost na mapie.');
+            return;
+        }
         const invalidItems = items.filter(item => item.quantity <= 0 || item.quantity > 999);
         if (invalidItems.length > 0) {
             toast.error('Sprawdź ilości produktów w koszyku');
@@ -227,7 +240,15 @@ export function KoszykPageContent() {
                 city: data.city,
                 postalCode: data.postalCode,
                 phoneNumber: data.phoneNumber,
-            }
+            },
+            inpostLocker: selectedLocker?.name ? {
+                id: selectedLocker.name,
+                name: selectedLocker.name,
+                address: `${selectedLocker.address?.line1 ?? ''} ${selectedLocker.address?.line2 ?? ''}`.trim(),
+                postcode: selectedLocker.address_details?.post_code,
+                city: selectedLocker.address_details?.city,
+                raw: selectedLocker,
+            } : undefined,
         };
 
         checkoutMutation.mutate(checkoutData);
@@ -544,10 +565,15 @@ export function KoszykPageContent() {
                                 {appliedDiscount && (<div className="flex justify-between text-green-600"><span>Rabat ({appliedDiscount.code}):</span><span>-{(discountAmount / 100).toFixed(2)} zł</span></div>)}
                                 <ShippingSelector
                                     selectedId={selectedShipping?.id ?? null}
-                                    onChange={(id, price) =>
-                                        setSelectedShipping({ id, price })
-                                    }
+                                    onChange={(method) => setSelectedShipping(method)}
                                 />
+                                {selectedShipping?.name.toLowerCase().includes('paczkomat') ? (
+                                    <InpostLockerSelector
+                                        value={selectedLocker}
+                                        onChange={setSelectedLocker}
+                                        postalCode={form.watch('postalCode')}
+                                    />
+                                ) : null}
                                 <Separator />
                                 <div className="flex justify-between font-bold text-xl"><span>Razem:</span><span>{(total / 100).toFixed(2)} zł</span></div>
                                 <Button onClick={() => form.handleSubmit(handleCheckout)()} disabled={items.length === 0 || checkoutMutation.isPending} className="w-full bg-orange-400 hover:bg-orange-500 rounded-[22px] py-3 px-4" size="lg">

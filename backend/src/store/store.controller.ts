@@ -33,6 +33,14 @@ class CreateCheckoutDto {
     customerEmail?: string;
     shippingMethodId: string;
     shippingAddress: ShippingAddressDto; // <-- DODANE POLE
+    inpostLocker?: {
+        id: string;
+        name?: string;
+        address?: string;
+        postcode?: string;
+        city?: string;
+        raw?: unknown;
+    };
 }
 
 @Controller('store')
@@ -77,10 +85,70 @@ export class StoreController {
         return this.storeService.getActiveShippingMethods();
     }
 
+    @Get('inpost/points')
+    getInpostPoints(
+        @Query('name') name?: string,
+        @Query('type') type?: string,
+        @Query('functions') functions?: string,
+        @Query('relative_point') relativePoint?: string,
+        @Query('relative_post_code') relativePostCode?: string,
+        @Query('max_distance') maxDistance?: string,
+        @Query('sort_by') sortBy?: string,
+        @Query('sort_order') sortOrder?: string,
+        @Query('page') page?: string,
+        @Query('per_page') perPage?: string,
+    ) {
+        return this.storeService.getInpostPoints({
+            name,
+            type,
+            functions,
+            relative_point: relativePoint,
+            relative_post_code: relativePostCode,
+            max_distance: maxDistance,
+            sort_by: sortBy,
+            sort_order: sortOrder,
+            page,
+            per_page: perPage,
+        });
+    }
+
     @UseGuards(JwtAuthGuard)
     @Get('admin/orders')
     getOrders() {
         return this.storeService.getOrders();
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('admin/orders/:orderId/inpost/shipment')
+    getInpostShipment(@Param('orderId') orderId: string) {
+        return this.storeService.getInpostShipmentForOrder(orderId);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Get('admin/orders/:orderId/inpost/label')
+    getInpostLabel(
+        @Param('orderId') orderId: string,
+        @Query('accept') accept?: string,
+    ) {
+        return this.storeService.getInpostLabelForOrder(orderId, accept);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('admin/orders/:orderId/inpost/shipment')
+    createInpostShipment(@Param('orderId') orderId: string) {
+        return this.storeService.createInpostShipmentForOrder(orderId);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('admin/orders/:orderId/inpost/sync-status')
+    syncInpostStatus(@Param('orderId') orderId: string) {
+        return this.storeService.syncInpostStatusForOrder(orderId);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('admin/orders/:orderId/inpost/dispatch-order')
+    createDispatchOrder(@Param('orderId') orderId: string) {
+        return this.storeService.createDispatchOrderForOrder(orderId);
     }
 
     @UseGuards(JwtAuthGuard)

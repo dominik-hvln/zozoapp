@@ -1,4 +1,4 @@
-import { Controller, Post, Headers, Req, RawBodyRequest, InternalServerErrorException } from '@nestjs/common';
+import { Body, Controller, Post, Headers, Req, RawBodyRequest, InternalServerErrorException } from '@nestjs/common';
 import { WebhooksService } from './webhooks.service';
 import Stripe from 'stripe';
 
@@ -46,6 +46,19 @@ export class WebhooksController {
             console.log(`[WEBHOOK] Zignorowano nieobsługiwany typ zdarzenia: ${event.type}`);
         }
 
+        return { received: true };
+    }
+
+    @Post('inpost-shipx')
+    async handleInpostShipxWebhook(
+        @Body() body: any,
+        @Headers('x-inpost-webhook-token') webhookToken?: string,
+    ) {
+        const expectedToken = process.env.INPOST_WEBHOOK_TOKEN;
+        if (expectedToken && webhookToken !== expectedToken) {
+            return { received: false, error: 'Invalid webhook token.' };
+        }
+        await this.webhooksService.handleInpostShipxWebhook(body);
         return { received: true };
     }
 }

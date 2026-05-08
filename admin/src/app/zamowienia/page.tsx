@@ -25,6 +25,14 @@ interface Order {
     phoneNumber: string;
     shippingMethodName: string;
     shippingMethodPrice: number;
+    inpostLockerId?: string | null;
+    inpostLockerName?: string | null;
+    inpostLockerAddress?: string | null;
+    inpostData?: {
+        trackingNumber?: string;
+        businessDeliveryStatus?: string;
+        inpostShipmentStatus?: string;
+    } | null;
     orderItems: Array<{
         quantity: number;
         price: number;
@@ -103,6 +111,58 @@ export default function AdminOrdersPage() {
 }
 
 function OrderDetailsDialog({ order }: { order: Order }) {
+    const isInpostOrder = (order.shippingMethodName || '').toLowerCase().includes('inpost') || !!order.inpostLockerId;
+
+    const handleDownloadLabel = async () => {
+        try {
+            const response = await api.get(`/store/admin/orders/${order.id}/inpost/label`, {
+                params: { accept: 'application/pdf+json;format=A6' },
+            });
+            const labelPayload = response.data;
+            const base64Label =
+                labelPayload?.parsedJson?.label
+                || labelPayload?.parsedJson?.content
+                || labelPayload?.body;
+            if (!base64Label) {
+                toast.error('Nie udało się pobrać etykiety.');
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = `data:application/pdf;base64,${base64Label}`;
+            link.download = `inpost-label-${order.id}.pdf`;
+            link.click();
+        } catch {
+            toast.error('Nie udało się pobrać etykiety InPost.');
+        }
+    };
+
+    const handleRefreshShipment = async () => {
+        try {
+            await api.post(`/store/admin/orders/${order.id}/inpost/sync-status`);
+            toast.success('Zsynchronizowano status przesyłki z InPost.');
+        } catch {
+            toast.error('Nie udało się odświeżyć statusu przesyłki.');
+        }
+    };
+
+    const handleCreateShipment = async () => {
+        try {
+            await api.post(`/store/admin/orders/${order.id}/inpost/shipment`);
+            toast.success('Utworzono lub odświeżono przesyłkę InPost.');
+        } catch {
+            toast.error('Nie udało się utworzyć przesyłki InPost.');
+        }
+    };
+
+    const handleCreateDispatchOrder = async () => {
+        try {
+            await api.post(`/store/admin/orders/${order.id}/inpost/dispatch-order`);
+            toast.success('Utworzono zlecenie odbioru kuriera.');
+        } catch {
+            toast.error('Nie udało się utworzyć zlecenia odbioru.');
+        }
+    };
+
     return (
         <Dialog>
             <DialogTrigger asChild>
@@ -156,6 +216,38 @@ function OrderDetailsDialog({ order }: { order: Order }) {
                                     <span>{order.shippingMethodName}</span>
                                     <span className="font-medium">{(order.shippingMethodPrice / 100).toFixed(2)} zł</span>
                                 </div>
+                                {order.inpostLockerId ? (
+                                    <div className="pt-2 space-y-1">
+                                        <p><strong>Numer paczkomatu:</strong> {order.inpostLockerId}</p>
+                                        {order.inpostLockerName ? <p><strong>Nazwa:</strong> {order.inpostLockerName}</p> : null}
+                                        {order.inpostLockerAddress ? <p><strong>Adres:</strong> {order.inpostLockerAddress}</p> : null}
+                                        {order.inpostData?.trackingNumber ? (
+                                            <p><strong>Tracking:</strong> {order.inpostData.trackingNumber}</p>
+                                        ) : null}
+                                        {order.inpostData?.inpostShipmentStatus ? (
+                                            <p><strong>Status InPost:</strong> {order.inpostData.inpostShipmentStatus}</p>
+                                        ) : null}
+                                        {order.inpostData?.businessDeliveryStatus ? (
+                                            <p><strong>Status biznesowy:</strong> {order.inpostData.businessDeliveryStatus}</p>
+                                        ) : null}
+                                    </div>
+                                ) : null}
+                                {isInpostOrder ? (
+                                    <div className="flex flex-wrap gap-2 pt-3">
+                                        <Button type="button" variant="outline" size="sm" onClick={handleCreateShipment}>
+                                            Utwórz/Re-utwórz przesyłkę
+                                        </Button>
+                                        <Button type="button" variant="outline" size="sm" onClick={handleDownloadLabel}>
+                                            Pobierz etykietę
+                                        </Button>
+                                        <Button type="button" variant="outline" size="sm" onClick={handleCreateDispatchOrder}>
+                                            Zamów odbiór kuriera
+                                        </Button>
+                                        <Button type="button" variant="outline" size="sm" onClick={handleRefreshShipment}>
+                                            Odśwież status
+                                        </Button>
+                                    </div>
+                                ) : null}
                             </CardContent>
                         </Card>
                         <Card>

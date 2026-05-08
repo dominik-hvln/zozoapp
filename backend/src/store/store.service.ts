@@ -4,6 +4,7 @@ import Stripe from 'stripe';
 import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
+import { InpostService } from './inpost.service';
 
 // --- NOWA DEFINICJA DTO DLA ADRESU ---
 class ShippingAddressDto {
@@ -23,13 +24,34 @@ class CreateCheckoutDto {
     customerEmail?: string;
     shippingMethodId: string;
     shippingAddress: ShippingAddressDto; // <-- DODANE POLE
+    inpostLocker?: {
+        id: string;
+        name?: string;
+        address?: string;
+        postcode?: string;
+        city?: string;
+        raw?: unknown;
+    };
 }
+
+type InpostDataPayload = {
+    trackingNumber?: string;
+    shipmentId?: string | number;
+    shipment_response?: unknown;
+    selected_point?: unknown;
+    businessDeliveryStatus?: string;
+    inpostShipmentStatus?: string;
+};
 
 @Injectable()
 export class StoreService {
     private stripe: Stripe;
+    private organizationServicesCache: { services: string[]; expiresAt: number } | null = null;
 
-    constructor(private prisma: PrismaService) {
+    constructor(
+        private prisma: PrismaService,
+        private inpostService: InpostService,
+    ) {
         const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
         if (!stripeSecretKey) {
             throw new InternalServerErrorException('Stripe secret key is not configured.');
@@ -138,7 +160,7 @@ export class StoreService {
 
 
     async createOneTimePaymentCheckoutSession(userId: string | null, checkoutDto: CreateCheckoutDto) {
-        const { items, platform, couponCode, shippingMethodId, shippingAddress, customerEmail } = checkoutDto;
+        const { items, platform, couponCode, shippingMethodId, shippingAddress, customerEmail, inpostLocker } = checkoutDto;
         const normalizedCustomerEmail = customerEmail?.trim().toLowerCase();
 
         if (!userId) {
@@ -163,6 +185,10 @@ export class StoreService {
         });
         if (!shippingMethod) {
             throw new BadRequestException('Wybrana metoda dostawy jest nieprawidłowa.');
+        }
+        const requiresInpostLocker = shippingMethod.name.toLowerCase().includes('paczkomat');
+        if (requiresInpostLocker && !inpostLocker?.id) {
+            throw new BadRequestException('Dla dostawy do paczkomatu wybierz punkt odbioru.');
         }
 
         const priceIds = items.map(item => item.priceId);
@@ -226,6 +252,11 @@ export class StoreService {
                 city: shippingAddress.city,
                 postal_code: shippingAddress.postalCode,
                 phone_number: shippingAddress.phoneNumber,
+                inpost_locker_id: inpostLocker?.id,
+                inpost_locker_name: inpostLocker?.name,
+                inpost_locker_address: inpostLocker?.address,
+                inpost_locker_postcode: inpostLocker?.postcode,
+                inpost_locker_city: inpostLocker?.city,
             }
         });
 
@@ -240,7 +271,12 @@ export class StoreService {
                 stripe_checkout_id: session.id,
                 stripe_payment_intent_id: typeof session.payment_intent === 'string' ? session.payment_intent : null,
                 total_amount: totalAmount,
-                inpost_locker_data: publicOrderAccessToken ? { public_access_token: publicOrderAccessToken } : undefined,
+                inpost_locker_name: inpostLocker?.name,
+                inpost_locker_address: inpostLocker?.address,
+                inpost_locker_data: {
+                    ...(publicOrderAccessToken ? { public_access_token: publicOrderAccessToken } : {}),
+                    ...(inpostLocker ? { selected_point: inpostLocker } : {}),
+                },
             }
         });
 
@@ -357,6 +393,158 @@ export class StoreService {
         return typeof payload.public_access_token === 'string' ? payload.public_access_token : null;
     }
 
+    private getInpostPayload(data: unknown): InpostDataPayload | null {
+        if (!data || typeof data !== 'object') {
+            return null;
+        }
+        return data as InpostDataPayload;
+    }
+
+    private extractTrackingNumber(response: unknown): string | undefined {
+        if (!response || typeof response !== 'object') {
+            return undefined;
+        }
+        const payload = response as Record<string, unknown>;
+        if (typeof payload.trackingNumber === 'string') {
+            return payload.trackingNumber;
+        }
+        if (typeof payload.tracking_number === 'string') {
+            return payload.tracking_number;
+        }
+        return undefined;
+    }
+
+    private extractShipmentId(response: unknown): string | undefined {
+        if (!response || typeof response !== 'object') {
+            return undefined;
+        }
+        const payload = response as Record<string, unknown>;
+        const directId = payload.id;
+        if (typeof directId === 'number' || typeof directId === 'string') {
+            return String(directId);
+        }
+        return undefined;
+    }
+
+    private extractShipmentStatus(response: unknown): string | undefined {
+        if (!response || typeof response !== 'object') {
+            return undefined;
+        }
+        const payload = response as Record<string, unknown>;
+        const directStatus = payload.status;
+        if (typeof directStatus === 'string') {
+            return directStatus;
+        }
+        const shipment = payload.shipment;
+        if (shipment && typeof shipment === 'object' && typeof (shipment as Record<string, unknown>).status === 'string') {
+            return (shipment as Record<string, unknown>).status as string;
+        }
+        return undefined;
+    }
+
+    private mapInpostStatusToBusinessStatus(status?: string) {
+        const normalized = (status ?? '').toUpperCase();
+        if (!normalized) return 'UNKNOWN';
+        if (['CREATED', 'REGISTERED'].includes(normalized)) return 'CREATED';
+        if (['PICKED_UP', 'IN_TRANSIT', 'ADOPTED_AT_SOURCE_BRANCH', 'SENT_FROM_SOURCE_BRANCH'].includes(normalized)) return 'IN_TRANSIT';
+        if (['READY_TO_PICKUP', 'READY_TO_COLLECT'].includes(normalized)) return 'READY_FOR_PICKUP';
+        if (['DELIVERED', 'COLLECTED'].includes(normalized)) return 'DELIVERED';
+        if (['RETURNED_TO_SENDER', 'RETURNED'].includes(normalized)) return 'RETURNED';
+        if (['CANCELED', 'CANCELLED', 'ERROR', 'UNDELIVERED', 'LOST', 'DAMAGED'].includes(normalized)) return 'EXCEPTION';
+        return 'UNKNOWN';
+    }
+
+    private async getAllowedShipxServices(organizationId: string) {
+        if (this.organizationServicesCache && Date.now() < this.organizationServicesCache.expiresAt) {
+            return this.organizationServicesCache.services;
+        }
+        const organization = await this.inpostService.getOrganization(organizationId);
+        const services = Array.isArray(organization?.services) ? organization.services : [];
+        this.organizationServicesCache = {
+            services,
+            expiresAt: Date.now() + 10 * 60 * 1000,
+        };
+        return services;
+    }
+
+    private buildShipxShipmentPayload(order: any) {
+        const methodName = (order.shipping_methods?.name ?? '').toLowerCase();
+        const isLockerDelivery = methodName.includes('paczkomat');
+        const service = isLockerDelivery ? 'inpost_locker_standard' : 'inpost_courier_standard';
+        const receiverAddress = {
+            street: order.shipping_addresses?.street,
+            building_number: '1',
+            city: order.shipping_addresses?.city,
+            post_code: order.shipping_addresses?.postal_code,
+            country_code: 'PL',
+        };
+
+        return {
+            reference: order.id,
+            service,
+            receiver: {
+                first_name: order.shipping_addresses?.first_name ?? order.users?.first_name ?? 'Klient',
+                last_name: order.shipping_addresses?.last_name ?? order.users?.last_name ?? 'Zozo',
+                email: order.users?.email,
+                phone: order.shipping_addresses?.phone_number ?? order.users?.phone ?? '',
+                address: receiverAddress,
+            },
+            sender: {
+                company_name: process.env.INPOST_SENDER_COMPANY_NAME,
+                first_name: process.env.INPOST_SENDER_FIRST_NAME,
+                last_name: process.env.INPOST_SENDER_LAST_NAME,
+                email: process.env.INPOST_SENDER_EMAIL,
+                phone: process.env.INPOST_SENDER_PHONE,
+                address: {
+                    street: process.env.INPOST_SENDER_STREET,
+                    building_number: process.env.INPOST_SENDER_BUILDING_NUMBER,
+                    city: process.env.INPOST_SENDER_CITY,
+                    post_code: process.env.INPOST_SENDER_POSTCODE,
+                    country_code: process.env.INPOST_SENDER_COUNTRY_CODE ?? 'PL',
+                },
+            },
+            parcels: [
+                {
+                    template: process.env.INPOST_DEFAULT_TEMPLATE ?? 'small',
+                },
+            ],
+            custom_attributes: isLockerDelivery
+                ? {
+                    target_point: order.shipping_addresses?.inpost_locker_id,
+                }
+                : {},
+        };
+    }
+
+    private async getOrderForInpostActions(orderId: string) {
+        const order = await this.prisma.orders.findUnique({
+            where: { id: orderId },
+            include: {
+                users: true,
+                shipping_addresses: true,
+                shipping_methods: true,
+            },
+        });
+        if (!order) {
+            throw new NotFoundException('Nie znaleziono zamówienia.');
+        }
+        return order;
+    }
+
+    private async updateInpostData(orderId: string, data: Record<string, unknown>, existingData?: unknown) {
+        const merged = {
+            ...(existingData && typeof existingData === 'object' ? existingData as object : {}),
+            ...data,
+        };
+        await this.prisma.orders.update({
+            where: { id: orderId },
+            data: {
+                inpost_locker_data: merged,
+            },
+        });
+        return merged;
+    }
+
     async createCustomerPortalSession(userId: string) {
         const user = await this.prisma.users.findUnique({ where: { id: userId } });
 
@@ -388,6 +576,10 @@ export class StoreService {
                 sa.phone_number as "phoneNumber",
                 sm.name as "shippingMethodName",
                 sm.price as "shippingMethodPrice",
+                sa.inpost_locker_id as "inpostLockerId",
+                sa.inpost_locker_name as "inpostLockerName",
+                sa.inpost_locker_address as "inpostLockerAddress",
+                o.inpost_locker_data as "inpostData",
                 (
                     SELECT json_agg(json_build_object(
                             'quantity', oi.quantity,
@@ -407,5 +599,180 @@ export class StoreService {
             ORDER BY o.created_at DESC;
         `;
         return orders;
+    }
+
+    async getInpostPoints(query: Record<string, string | undefined>) {
+        return this.inpostService.getPoints(query);
+    }
+
+    async getInpostShipmentForOrder(orderId: string) {
+        const order = await this.prisma.orders.findUnique({
+            where: { id: orderId },
+            select: { id: true, inpost_locker_data: true },
+        });
+        if (!order) {
+            throw new NotFoundException('Nie znaleziono zamówienia.');
+        }
+
+        const payload = this.getInpostPayload(order.inpost_locker_data);
+        const shipmentId = payload?.shipmentId ? String(payload.shipmentId) : undefined;
+        if (!shipmentId) {
+            throw new BadRequestException('Brak identyfikatora przesyłki ShipX dla tego zamówienia.');
+        }
+
+        return this.inpostService.getShipmentById(shipmentId);
+    }
+
+    async getInpostLabelForOrder(orderId: string, acceptHeader?: string) {
+        const order = await this.prisma.orders.findUnique({
+            where: { id: orderId },
+            select: { id: true, inpost_locker_data: true },
+        });
+        if (!order) {
+            throw new NotFoundException('Nie znaleziono zamówienia.');
+        }
+
+        const payload = this.getInpostPayload(order.inpost_locker_data);
+        const shipmentId = payload?.shipmentId ? String(payload.shipmentId) : undefined;
+        if (!shipmentId) {
+            throw new BadRequestException('Brak identyfikatora przesyłki ShipX dla tego zamówienia.');
+        }
+
+        const labelType = acceptHeader?.toUpperCase() === 'A4' ? 'normal' : 'A6';
+
+        return this.inpostService.getShipmentLabel(
+            shipmentId,
+            'Pdf',
+            labelType,
+        );
+    }
+
+    async createInpostShipmentForOrder(orderId: string) {
+        const order = await this.getOrderForInpostActions(orderId);
+        const methodName = (order.shipping_methods?.name ?? '').toLowerCase();
+        if (!methodName.includes('inpost')) {
+            throw new BadRequestException('To zamówienie nie używa dostawy InPost.');
+        }
+
+        const isLockerDelivery = methodName.includes('paczkomat');
+        if (isLockerDelivery && !order.shipping_addresses?.inpost_locker_id) {
+            throw new BadRequestException('Brak wybranego paczkomatu dla zamówienia.');
+        }
+
+        const organizationId = process.env.INPOST_ORGANIZATION_ID;
+        if (!organizationId) {
+            throw new InternalServerErrorException('Brak konfiguracji INPOST_ORGANIZATION_ID.');
+        }
+
+        const payload = this.buildShipxShipmentPayload(order);
+
+        const requestedService = payload.service;
+        const allowedServices = await this.getAllowedShipxServices(organizationId);
+        if (!allowedServices.includes(requestedService)) {
+            throw new BadRequestException(`Serwis ${requestedService} nie jest dostępny dla tej organizacji ShipX.`);
+        }
+
+        const response = await this.inpostService.createShipment(organizationId, payload);
+        const trackingNumber = this.extractTrackingNumber(response);
+        const shipmentId = this.extractShipmentId(response);
+        const status = this.extractShipmentStatus(response);
+        const businessStatus = this.mapInpostStatusToBusinessStatus(status);
+
+        const inpostData = await this.updateInpostData(order.id, {
+            shipment_request: payload,
+            shipment_response: response,
+            shipmentId: shipmentId ?? null,
+            trackingNumber: trackingNumber ?? null,
+            inpostShipmentStatus: status ?? null,
+            businessDeliveryStatus: businessStatus,
+            shipmentCreatedAt: new Date().toISOString(),
+        }, order.inpost_locker_data);
+
+        return {
+            shipmentId: shipmentId ?? null,
+            trackingNumber: trackingNumber ?? null,
+            inpostShipmentStatus: status ?? null,
+            businessDeliveryStatus: businessStatus,
+            inpostData,
+        };
+    }
+
+    async syncInpostStatusForOrder(orderId: string) {
+        const order = await this.getOrderForInpostActions(orderId);
+        const payload = this.getInpostPayload(order.inpost_locker_data);
+        const shipmentId = payload?.shipmentId ? String(payload.shipmentId) : undefined;
+        const trackingNumber = payload?.trackingNumber;
+        if (!shipmentId) {
+            throw new BadRequestException('Brak identyfikatora przesyłki ShipX dla tego zamówienia.');
+        }
+
+        const shipment = await this.inpostService.getShipmentById(shipmentId);
+        let status = this.extractShipmentStatus(shipment);
+        let trackingPayload: unknown = null;
+        if ((!status || status === 'unknown') && trackingNumber) {
+            try {
+                trackingPayload = await this.inpostService.getTrackingByNumber(trackingNumber);
+                const trackingStatus = (trackingPayload as Record<string, unknown>)?.status;
+                if (typeof trackingStatus === 'string') {
+                    status = trackingStatus;
+                }
+            } catch {
+                // fallback best-effort: keep status from shipment resource
+            }
+        }
+        const businessStatus = this.mapInpostStatusToBusinessStatus(status);
+
+        const inpostData = await this.updateInpostData(order.id, {
+            shipment_response: shipment,
+            tracking_response: trackingPayload,
+            inpostShipmentStatus: status ?? null,
+            businessDeliveryStatus: businessStatus,
+            statusSyncedAt: new Date().toISOString(),
+        }, order.inpost_locker_data);
+
+        return {
+            shipmentId,
+            trackingNumber,
+            inpostShipmentStatus: status ?? null,
+            businessDeliveryStatus: businessStatus,
+            inpostData,
+        };
+    }
+
+    async createDispatchOrderForOrder(orderId: string) {
+        const order = await this.getOrderForInpostActions(orderId);
+        const payload = this.getInpostPayload(order.inpost_locker_data);
+        const shipmentId = payload?.shipmentId ? String(payload.shipmentId) : undefined;
+        if (!shipmentId) {
+            throw new BadRequestException('Najpierw utwórz przesyłkę ShipX.');
+        }
+
+        const organizationId = process.env.INPOST_ORGANIZATION_ID;
+        if (!organizationId) {
+            throw new InternalServerErrorException('Brak konfiguracji INPOST_ORGANIZATION_ID.');
+        }
+
+        const dispatchPayload = {
+            shipments: [shipmentId],
+            name: `${order.shipping_addresses?.first_name ?? ''} ${order.shipping_addresses?.last_name ?? ''}`.trim() || 'Odbior paczek',
+            phone: order.shipping_addresses?.phone_number ?? order.users?.phone ?? process.env.INPOST_SENDER_PHONE ?? '',
+            email: order.users?.email ?? process.env.INPOST_SENDER_EMAIL ?? undefined,
+            address: {
+                street: process.env.INPOST_SENDER_STREET,
+                building_number: process.env.INPOST_SENDER_BUILDING_NUMBER,
+                city: process.env.INPOST_SENDER_CITY,
+                post_code: process.env.INPOST_SENDER_POSTCODE,
+                country_code: process.env.INPOST_SENDER_COUNTRY_CODE ?? 'PL',
+            },
+            comment: `Automatyczne zlecenie odbioru dla zamówienia ${order.id}`,
+        };
+
+        const dispatchOrder = await this.inpostService.createDispatchOrder(organizationId, dispatchPayload);
+        const inpostData = await this.updateInpostData(order.id, {
+            dispatch_order: dispatchOrder,
+            dispatch_order_created_at: new Date().toISOString(),
+        }, order.inpost_locker_data);
+
+        return { dispatchOrder, inpostData };
     }
 }

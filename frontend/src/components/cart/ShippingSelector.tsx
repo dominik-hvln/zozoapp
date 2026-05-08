@@ -16,7 +16,7 @@ export type ShippingMethod = {
 
 type Props = {
     selectedId: string | null;
-    onChange: (id: string, price: number) => void;
+    onChange: (method: ShippingMethod) => void;
 };
 
 export function ShippingSelector({ selectedId, onChange }: Props) {
@@ -30,7 +30,7 @@ export function ShippingSelector({ selectedId, onChange }: Props) {
         if (!data || !data.length) return;
         if (!selectedId) {
             const cheapest = [...data].sort((a, b) => a.price - b.price)[0];
-            if (cheapest) onChange(cheapest.id, cheapest.price);
+            if (cheapest) onChange(cheapest);
         }
     }, [data, onChange, selectedId]);
 
@@ -47,7 +47,7 @@ export function ShippingSelector({ selectedId, onChange }: Props) {
                 value={selectedId ?? undefined}
                 onValueChange={(id) => {
                     const m = data.find(x => x.id === id);
-                    if (m) onChange(m.id, m.price);
+                    if (m) onChange(m);
                 }}
                 className="grid gap-2"
             >
