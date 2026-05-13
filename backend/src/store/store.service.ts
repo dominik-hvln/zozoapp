@@ -664,6 +664,13 @@ export class StoreService {
             if (message.includes('shipment_status_incorrect') || message.includes('offer_selected')) {
                 const shipment = await this.inpostService.getShipmentById(shipmentId);
                 const status = this.extractShipmentStatus(shipment) ?? 'unknown';
+                const businessStatus = this.mapInpostStatusToBusinessStatus(status);
+                await this.updateInpostData(order.id, {
+                    shipment_response: shipment,
+                    inpostShipmentStatus: status,
+                    businessDeliveryStatus: businessStatus,
+                    statusSyncedAt: new Date().toISOString(),
+                }, order.inpost_locker_data);
                 throw new ConflictException(`Etykieta nie jest jeszcze dostępna w ShipX. Aktualny status przesyłki: ${status}. Odśwież status i spróbuj ponownie za chwilę.`);
             }
             throw error;
