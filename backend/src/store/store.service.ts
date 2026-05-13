@@ -448,6 +448,7 @@ export class StoreService {
         const normalized = (status ?? '').toUpperCase();
         if (!normalized) return 'UNKNOWN';
         if (['CREATED', 'REGISTERED'].includes(normalized)) return 'CREATED';
+        if (['OFFER_SELECTED'].includes(normalized)) return 'PENDING_OFFER';
         if (['PICKED_UP', 'IN_TRANSIT', 'ADOPTED_AT_SOURCE_BRANCH', 'SENT_FROM_SOURCE_BRANCH'].includes(normalized)) return 'IN_TRANSIT';
         if (['READY_TO_PICKUP', 'READY_TO_COLLECT'].includes(normalized)) return 'READY_FOR_PICKUP';
         if (['DELIVERED', 'COLLECTED'].includes(normalized)) return 'DELIVERED';
@@ -671,7 +672,11 @@ export class StoreService {
                     businessDeliveryStatus: businessStatus,
                     statusSyncedAt: new Date().toISOString(),
                 }, order.inpost_locker_data);
-                throw new ConflictException(`Etykieta nie jest jeszcze dostępna w ShipX. Aktualny status przesyłki: ${status}. Odśwież status i spróbuj ponownie za chwilę.`);
+                const debtHint = this.describeShipxTransactionIssues(shipment);
+                const suffix = debtHint ? ` ${debtHint}` : '';
+                throw new ConflictException(
+                    `Etykieta nie jest jeszcze dostępna w ShipX. Aktualny status przesyłki: ${status}. Poczekaj na zakończenie rozliczenia oferty (ShipX przetwarza to asynchronicznie) lub odśwież status.${suffix}`,
+                );
             }
             throw error;
         }
@@ -702,14 +707,25 @@ export class StoreService {
         }
 
         const response = await this.inpostService.createShipment(organizationId, payload);
-        const trackingNumber = this.extractTrackingNumber(response);
         const shipmentId = this.extractShipmentId(response);
-        const status = this.extractShipmentStatus(response);
+        let latestShipment: unknown = response;
+        let trackingNumber = this.extractTrackingNumber(response);
+        let status = this.extractShipmentStatus(response);
+        if (shipmentId) {
+            try {
+                latestShipment = await this.inpostService.getShipmentById(shipmentId);
+                trackingNumber = this.extractTrackingNumber(latestShipment) ?? trackingNumber;
+                status = this.extractShipmentStatus(latestShipment) ?? status;
+            } catch {
+                latestShipment = response;
+            }
+        }
         const businessStatus = this.mapInpostStatusToBusinessStatus(status);
 
         const inpostData = await this.updateInpostData(order.id, {
             shipment_request: payload,
-            shipment_response: response,
+            shipment_response: latestShipment,
+            shipment_create_response: response,
             shipmentId: shipmentId ?? null,
             trackingNumber: trackingNumber ?? null,
             inpostShipmentStatus: status ?? null,
@@ -841,5 +857,32 @@ export class StoreService {
             return compact;
         }
         return null;
+    }
+
+    /** Best-effort: ShipX zwraca błędy rozliczeniowe w `transactions[].details`. */
+    private describeShipxTransactionIssues(shipment: unknown): string | null {
+        if (!shipment || typeof shipment !== 'object') return null;
+        const txs = (shipment as Record<string, unknown>).transactions;
+        if (!Array.isArray(txs) || txs.length === 0) return null;
+        const errors: string[] = [];
+        for (const tx of txs) {
+            if (!tx || typeof tx !== 'object') continue;
+            const t = tx as Record<string, unknown>;
+            if (t.status !== 'failure') continue;
+            const details = t.details;
+            if (details && typeof details === 'object') {
+                const d = details as Record<string, unknown>;
+                const err = typeof d.error === 'string' ? d.error : null;
+                const msg = typeof d.message === 'string' ? d.message : null;
+                if (err) errors.push(err);
+                else if (msg) errors.push(msg);
+            }
+        }
+        const unique = [...new Set(errors)];
+        if (!unique.length) return null;
+        if (unique.includes('debt_collection')) {
+            return '(ShipX: transakcja zakończona niepowodzeniem — debt_collection / blokada rozliczeń konta. Sprawdź saldo i rozliczenia w panelu InPost dla tej organizacji.)';
+        }
+        return `(ShipX: problem z transakcją: ${unique.join(', ')}.)`;
     }
 }
