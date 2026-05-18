@@ -18,7 +18,7 @@ export class UsersService {
                     password_hash: dto.password_hash,
                     first_name: dto.firstName,
                     last_name: dto.lastName,
-                    phone: dto.phone,
+                    phone: dto.phone?.trim() || null,
                     trial_expires_at: trialExpires,
                     account_status: 'TRIAL',
                 },

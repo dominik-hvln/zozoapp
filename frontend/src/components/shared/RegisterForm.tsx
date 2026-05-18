@@ -17,7 +17,10 @@ const registerSchema = z.object({
     firstName: z.string().min(2, 'Imię musi mieć co najmniej 2 znaki'),
     lastName: z.string().min(2, 'Nazwisko musi mieć co najmniej 2 znaki'),
     email: z.string().email('Nieprawidłowy adres email'),
-    phone: z.string().min(9, 'Numer telefonu jest nieprawidłowy'),
+    phone: z.string()
+        .trim()
+        .optional()
+        .refine((value) => !value || value.length >= 9, 'Numer telefonu jest nieprawidłowy'),
     password: z.string().min(8, 'Hasło musi mieć co najmniej 8 znaków'),
     confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
@@ -83,7 +86,7 @@ export function RegisterForm() {
                         {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
                     </div>
                     <div className="space-y-2">
-                        <Label htmlFor="phone">Telefon</Label>
+                        <Label htmlFor="phone">Telefon (opcjonalnie)</Label>
                         <Input id="phone" type="tel" {...register('phone')} />
                         {errors.phone && <p className="text-sm text-red-500">{errors.phone.message}</p>}
                     </div>

@@ -253,7 +253,7 @@ export class StoreService {
                 street: shippingAddress.street,
                 city: shippingAddress.city,
                 postal_code: shippingAddress.postalCode,
-                phone_number: shippingAddress.phoneNumber,
+                phone_number: shippingAddress.phoneNumber?.trim() || null,
                 inpost_locker_id: inpostLocker?.id,
                 inpost_locker_name: inpostLocker?.name,
                 inpost_locker_address: inpostLocker?.address,

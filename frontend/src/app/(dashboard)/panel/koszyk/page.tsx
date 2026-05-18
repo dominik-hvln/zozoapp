@@ -50,27 +50,31 @@ const shippingAddressSchema = z.object({
         .regex(/^\d{2}-\d{3}$/, 'Kod pocztowy musi być w formacie XX-XXX (np. 00-000)')
         .refine(val => val !== '00-000', 'Wprowadź prawidłowy kod pocztowy'),
     phoneNumber: z.string()
+        .trim()
         .optional()
-        .or(z.string()
-            .min(1, 'Numer telefonu nie może być pusty')
-            .max(15, 'Numer telefonu może mieć maksymalnie 15 cyfr')
-            .regex(/^(\+48\s?)?[\d\s()-]{9,15}$/, 'Numer telefonu musi być w formacie polskim')
-            .refine(val => {
-                if (!val || val.trim() === '') return true; // Opcjonalne pole
-                const digitsOnly = val.replace(/\D/g, '');
-                return digitsOnly.length >= 9 && digitsOnly.length <= 11;
-            }, 'Numer telefonu musi zawierać 9-11 cyfr')
-            .refine(val => {
-                if (!val || val.trim() === '') return true;
-                const digitsOnly = val.replace(/\D/g, '');
-                if (digitsOnly.startsWith('48')) {
-                    return digitsOnly.length === 11; // +48 + 9 cyfr
-                } else if (!digitsOnly.startsWith('48')) {
-                    return digitsOnly.length === 9; // lokalne 9 cyfr
-                }
-                return true;
-            }, 'Nieprawidłowy format numeru telefonu dla Polski')
-        ),
+        .refine(val => {
+            if (!val) return true;
+            return val.length <= 15;
+        }, 'Numer telefonu może mieć maksymalnie 15 cyfr')
+        .refine(val => {
+            if (!val) return true;
+            return /^(\+48\s?)?[\d\s()-]{9,15}$/.test(val);
+        }, 'Numer telefonu musi być w formacie polskim')
+        .refine(val => {
+            if (!val) return true;
+            const digitsOnly = val.replace(/\D/g, '');
+            return digitsOnly.length >= 9 && digitsOnly.length <= 11;
+        }, 'Numer telefonu musi zawierać 9-11 cyfr')
+        .refine(val => {
+            if (!val) return true;
+            const digitsOnly = val.replace(/\D/g, '');
+            if (digitsOnly.startsWith('48')) {
+                return digitsOnly.length === 11; // +48 + 9 cyfr
+            } else if (!digitsOnly.startsWith('48')) {
+                return digitsOnly.length === 9; // lokalne 9 cyfr
+            }
+            return true;
+        }, 'Nieprawidłowy format numeru telefonu dla Polski'),
 });
 
 type AppliedDiscount = { code: string; discount: { type: 'PERCENTAGE' | 'FIXED_AMOUNT'; value: number } };
