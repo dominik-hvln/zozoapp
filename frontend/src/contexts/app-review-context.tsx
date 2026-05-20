@@ -12,8 +12,14 @@ const AppReviewContext = createContext<AppReviewContextValue>({
     isLoaded: false,
 });
 
-export function AppReviewModeProvider({ children }: { children: React.ReactNode }) {
-    const [isReviewMode, setIsReviewMode] = useState(false);
+export function AppReviewModeProvider({
+    children,
+    initialReviewMode = false,
+}: {
+    children: React.ReactNode;
+    initialReviewMode?: boolean;
+}) {
+    const [isReviewMode, setIsReviewMode] = useState(initialReviewMode);
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {

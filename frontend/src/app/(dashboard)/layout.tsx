@@ -149,9 +149,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     return (
         <>
             <PaymentStatus />
-            <div className={cn("flex min-h-screen w-full flex-col", { "pt-safe": isNativeMobile })}>
+            <div className="flex min-h-screen w-full flex-col">
                 <Header />
-                <main className="flex-1 p-4 md:p-6 lg:p-8 relative min-w-0">
+                <main className="relative min-w-0 flex-1 p-4 md:p-6 lg:p-8">
                     {isAccountBlocked ? (
                         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
                             <div className="text-center p-6 border rounded-lg bg-white shadow-xl max-w-sm">

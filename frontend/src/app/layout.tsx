@@ -1,29 +1,25 @@
-'use client';
-
-import { Inter } from 'next/font/google';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
-import Providers from '@/components/providers';
-import { Toaster } from '@/components/ui/sonner';
-import "leaflet/dist/leaflet.css";
-import { AuthInitializer } from '@/components/auth/AuthInitializer';
+import 'leaflet/dist/leaflet.css';
+import { ClientShell } from '@/components/client-shell';
+import { isAppStoreReviewModeServer } from '@/lib/app-review-server';
 
-const inter = Inter({ subsets: ['latin'] });
+export const metadata: Metadata = {
+    title: 'ZozoApp',
+};
 
-export default function RootLayout({
-                                       children,
-                                   }: {
-    children: React.ReactNode;
-}) {
+export const viewport: Viewport = {
+    width: 'device-width',
+    initialScale: 1,
+    viewportFit: 'cover',
+};
 
+export default function RootLayout({ children }: { children: React.ReactNode }) {
     return (
         <html lang="pl">
-        <body className={`${inter.className} antialiased`}>
-        <Providers>
-            <AuthInitializer />
-            {children}
-            <Toaster />
-        </Providers>
-        </body>
+            <ClientShell initialReviewMode={isAppStoreReviewModeServer()}>
+                {children}
+            </ClientShell>
         </html>
     );
 }

@@ -137,5 +137,11 @@ body {
 }
 
 .pt-safe {
-    padding-top: env(safe-area-inset-top);
+    padding-top: env(safe-area-inset-top, 0px);
+}
+
+/* iOS / Android (Capacitor): menu pod paskiem statusu, sticky przy scrollu */
+.native-header-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+    top: 0;
 }

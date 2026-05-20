@@ -31,8 +31,15 @@ const registerSchema = z.object({
 
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
-export function RegisterForm() {
-    const { isReviewMode } = useAppStoreReviewMode();
+function getRegisterDescription(reviewMode: boolean): string {
+    return reviewMode
+        ? 'Załóż konto w ZozoApp i zarządzaj tatuażami dla dzieci.'
+        : 'Załóż darmowe, 14-dniowe konto próbne.';
+}
+
+export function RegisterForm({ reviewMode: reviewModeProp }: { reviewMode?: boolean }) {
+    const { isReviewMode: reviewModeClient, isLoaded } = useAppStoreReviewMode();
+    const reviewMode = reviewModeProp ?? reviewModeClient;
     const router = useRouter();
     const setToken = useAuthStore((state) => state.setToken);
     const {
@@ -67,9 +74,9 @@ export function RegisterForm() {
             <CardHeader>
                 <CardTitle>Stwórz nowe konto</CardTitle>
                 <CardDescription>
-                    {isReviewMode
-                        ? 'Załóż konto w ZozoApp i zarządzaj tatuażami dla dzieci.'
-                        : 'Załóż darmowe, 14-dniowe konto próbne.'}
+                    {reviewModeProp !== undefined || isLoaded
+                        ? getRegisterDescription(reviewMode)
+                        : 'Załóż konto w ZozoApp.'}
                 </CardDescription>
             </CardHeader>
             <CardContent>
