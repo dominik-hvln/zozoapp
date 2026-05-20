@@ -14,6 +14,7 @@ import { Header } from '@/components/layout/Header';
 import { Loader2 } from 'lucide-react';
 import { App } from '@capacitor/app';
 import { cn } from '@/lib/utils';
+import { useAppStoreReviewMode } from '@/lib/app-review';
 
 const getFullProfile = async () => (await api.get('/auth/profile')).data;
 
@@ -72,6 +73,7 @@ function PaymentStatus() {
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode; }) {
+    const { isReviewMode } = useAppStoreReviewMode();
     const { token, setToken, initializeAuth, isInitialized } = useAuthStore();
     const router = useRouter();
     const queryClient = useQueryClient();
@@ -141,14 +143,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         return null;
     }
 
-    const isAccountBlocked = fullProfile?.account_status === 'BLOCKED';
+    const isAccountBlocked =
+        !isReviewMode && fullProfile?.account_status === 'BLOCKED';
 
     return (
         <>
             <PaymentStatus />
             <div className={cn("flex min-h-screen w-full flex-col", { "pt-safe": isNativeMobile })}>
                 <Header />
-                <main className={cn("flex-1 p-4 lg:p-8 relative", {"pt-20" : isNativeMobile})}>
+                <main className="flex-1 p-4 md:p-6 lg:p-8 relative min-w-0">
                     {isAccountBlocked ? (
                         <div className="absolute inset-0 bg-white/80 backdrop-blur-sm z-10 flex items-center justify-center">
                             <div className="text-center p-6 border rounded-lg bg-white shadow-xl max-w-sm">

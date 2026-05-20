@@ -1,12 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { isAppStoreReviewMode } from 'src/common/app-review';
 
 @Injectable()
 export class TasksService {
     private readonly logger = new Logger(TasksService.name);
 
-    constructor(private prisma: PrismaService) {}
+    constructor(
+        private prisma: PrismaService,
+        private configService: ConfigService,
+    ) {}
 
     @Cron(CronExpression.EVERY_HOUR)
     async handleCron() {
@@ -57,6 +62,26 @@ export class TasksService {
             this.logger.log(`Successfully expired ${expiredTattoos.length} tattoos.`);
         } catch (error) {
             this.logger.error('Error expiring tattoos', error);
+        }
+    }
+
+    @Cron(CronExpression.EVERY_HOUR)
+    async expireTrialAccounts() {
+        if (isAppStoreReviewMode(this.configService)) {
+            return;
+        }
+
+        const now = new Date();
+        const result = await this.prisma.users.updateMany({
+            where: {
+                account_status: 'TRIAL',
+                trial_expires_at: { lt: now },
+            },
+            data: { account_status: 'BLOCKED' },
+        });
+
+        if (result.count > 0) {
+            this.logger.log(`Blocked ${result.count} trial account(s) after trial expiry.`);
         }
     }
 }

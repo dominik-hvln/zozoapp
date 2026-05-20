@@ -1,11 +1,17 @@
 import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from 'src/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { NotificationsService } from 'src/notifications/notifications.service';
+import { effectiveAccountStatus, isAppStoreReviewMode } from 'src/common/app-review';
 
 @Injectable()
 export class ProfileService {
-    constructor(private prisma: PrismaService, private notificationsService: NotificationsService) {}
+    constructor(
+        private prisma: PrismaService,
+        private notificationsService: NotificationsService,
+        private configService: ConfigService,
+    ) {}
 
     async getFullProfile(userId: string) {
         const user = await this.prisma.users.findUnique({
@@ -40,21 +46,31 @@ export class ProfileService {
         }
 
         const scansCount = 0;
-        let subscriptionStatus = 'Nieznany';
-        switch (user.account_status) {
-            case 'ACTIVE':
-                subscriptionStatus = 'Standard (Aktywny)';
-                break;
-            case 'TRIAL':
-                subscriptionStatus = 'Okres próbny';
-                break;
 
-            case 'BLOCKED':
-                subscriptionStatus = 'Wygasł / Zablokowany';
-                break;
-        }
+        const effectiveStatus = effectiveAccountStatus(this.configService, user.account_status);
 
-        return { ...user, scansCount, subscriptionStatus };
+        const subscriptionStatus = isAppStoreReviewMode(this.configService)
+            ? 'Standard (Aktywny)'
+            : (() => {
+                switch (user.account_status) {
+                    case 'ACTIVE':
+                        return 'Standard (Aktywny)';
+                    case 'TRIAL':
+                        return 'Okres próbny';
+                    case 'BLOCKED':
+                        return 'Wygasł / Zablokowany';
+                    default:
+                        return 'Nieznany';
+                }
+            })();
+
+        return {
+            ...user,
+            account_status: effectiveStatus,
+            trial_expires_at: isAppStoreReviewMode(this.configService) ? null : user.trial_expires_at,
+            scansCount,
+            subscriptionStatus,
+        };
     }
 
     updateProfile(userId: string, data: { firstName: string; lastName: string; avatar_url: string; phone: string }) {

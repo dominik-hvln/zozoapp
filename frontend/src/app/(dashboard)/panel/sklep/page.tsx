@@ -65,26 +65,26 @@ function ProductCard({ product }: { product: Product }) {
     }
 
     return (
-        <Card className="flex flex-col md:flex-row p-4">
-            <CardHeader className="p-0 w-full md:w-30 md:min-w-30">
+        <Card className="flex flex-col gap-4 p-4 lg:flex-row lg:gap-6">
+            <CardHeader className="p-0 w-full shrink-0 lg:w-36 lg:min-w-36">
                 <Image
                     src={product.image_url || AppleIcon}
                     alt={product.name}
                     width={300}
                     height={200}
-                    className="w-full h-30 md:h-48 object-contain rounded-t-lg"
+                    className="mx-auto h-32 w-full max-w-[220px] object-contain sm:h-40 lg:h-44"
                 />
             </CardHeader>
-            <CardContent className="p-0 flex flex-col flex-grow">
-                <CardTitle className="text-lg">{product.name}</CardTitle>
-                <CardDescription className="text-xs mt-1">{product.description}</CardDescription>
+            <CardContent className="flex min-w-0 flex-1 flex-col p-0">
+                <CardTitle className="text-lg leading-snug">{product.name}</CardTitle>
+                <CardDescription className="mt-1 text-xs">{product.description}</CardDescription>
                 <div className="mt-4 flex-grow">
                     <p className="text-xs text-muted-foreground mb-2">Wybierz ilość:</p>
                     <ToggleGroup
                         type="single"
                         value={selectedVariantId}
                         onValueChange={(value) => { if (value) setSelectedVariantId(value) }}
-                        className="justify-start gap-2"
+                        className="flex flex-wrap justify-start gap-2"
                     >
                         {product.product_variants.map(variant => (
                             <ToggleGroupItem key={variant.id} value={variant.id} className="text-xs h-8 px-3 product_qty">
@@ -93,9 +93,9 @@ function ProductCard({ product }: { product: Product }) {
                         ))}
                     </ToggleGroup>
                 </div>
-                <div className="flex items-center justify-between mt-4 pt-4 border-t">
-                    <p className="text-2xl text-[#466EC6] font-bold">{(selectedVariant?.price || 0) / 100} zł</p>
-                    <Button onClick={handleAddToCart} size="lg" className="bg-orange-400 hover:bg-orange-500 rounded-[22px] py-3 px-4">
+                <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-2xl font-bold text-[#466EC6]">{(selectedVariant?.price || 0) / 100} zł</p>
+                    <Button onClick={handleAddToCart} size="lg" className="w-full shrink-0 rounded-[22px] bg-orange-400 px-4 py-3 hover:bg-orange-500 sm:w-auto">
                         <ShoppingCart className="mr-2 h-4 w-4" /> Dodaj do koszyka
                     </Button>
                 </div>
@@ -117,10 +117,10 @@ export function SklepPageContent() {
     });
 
     return (
-        <Card>
-            <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-                    <aside className="lg:col-span-1 sticky">
+        <Card className="overflow-hidden">
+            <CardContent className="p-4 md:p-6">
+                <div className="grid grid-cols-1 items-start gap-6 md:gap-8 lg:grid-cols-4">
+                    <aside className="lg:col-span-1 lg:sticky lg:top-4 lg:self-start">
                         <ToggleGroup className="mb-6" type="single" value={viewMode} onValueChange={(value) => { if(value) setViewMode(value) }}>
                             <ToggleGroupItem value="grid"><LayoutGrid className="h-4 w-4" /></ToggleGroupItem>
                             <ToggleGroupItem value="list"><List className="h-4 w-4" /></ToggleGroupItem>
@@ -138,8 +138,8 @@ export function SklepPageContent() {
                         </Card>
                     </aside>
 
-                    <main className="lg:col-span-3">
-                        <div className="flex flex-col sm:flex-row gap-4 justify-between items-center mb-6">
+                    <main className="min-w-0 lg:col-span-3">
+                        <div className="mb-6 flex flex-col items-stretch justify-between gap-4 sm:flex-row sm:items-center">
                             <div className="relative w-full sm:max-w-xs">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input type="search" placeholder="Szukaj produktów..." className="pl-8 w-full" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
@@ -157,7 +157,7 @@ export function SklepPageContent() {
 
                         {isLoading ? <p>Ładowanie...</p> : error ? <p>Błąd.</p> : (
                             viewMode === 'grid' ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6 xl:grid-cols-2">
                                     {products?.map((product) => <ProductCard key={product.id} product={product} />)}
                                 </div>
                             ) : (

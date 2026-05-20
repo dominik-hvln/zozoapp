@@ -11,6 +11,7 @@ import { UserPlus, Edit } from 'lucide-react';
 import Image from 'next/image';
 import AppleIcon from '@/assets/avatars/apple.svg';
 import LemonIcon from '@/assets/avatars/lemon.svg';
+import { useAppStoreReviewMode } from '@/lib/app-review';
 
 interface ProfileData {
     avatar_url: string;
@@ -29,6 +30,7 @@ interface ProfileData {
 const getProfile = async (): Promise<ProfileData> => (await api.get('/profile/me')).data;
 
 export default function ProfilPage() {
+    const { isReviewMode } = useAppStoreReviewMode();
     const { data: profile, isLoading } = useQuery({ queryKey: ['fullProfile'], queryFn: getProfile });
     const { user, logout } = useAuthStore();
 
@@ -66,7 +68,9 @@ export default function ProfilPage() {
                         <p>Data utworzenia konta: {new Date(profile.created_at).toLocaleDateString('pl-PL')}</p>
                         <p>Liczba aktywnych kodów: {profile._count?.assignments || 0}</p>
                         <p>Liczba skanów QR: {profile.scansCount}</p>
-                        <p>Subskrypcja: {profile.subscriptionStatus}</p>
+                        {!isReviewMode && (
+                            <p>Subskrypcja: {profile.subscriptionStatus}</p>
+                        )}
                     </CardContent>
                 </Card>
             </div>

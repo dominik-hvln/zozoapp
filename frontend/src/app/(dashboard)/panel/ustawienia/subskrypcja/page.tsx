@@ -1,6 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useMutation, useQuery } from '@tanstack/react-query';
+import { useAppStoreReviewMode } from '@/lib/app-review';
 import { api } from '@/lib/api';
 import { useAuthStore } from '@/store/auth.store';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,8 +17,16 @@ const createSubscriptionCheckout = async () => (await api.post('/store/checkout/
 const getProfile = async () => (await api.get('/profile/me')).data;
 
 export default function SubscriptionPage() {
+    const { isReviewMode } = useAppStoreReviewMode();
+    const router = useRouter();
     const { user } = useAuthStore();
     const { data: profile } = useQuery({ queryKey: ['fullProfile'], queryFn: getProfile });
+
+    useEffect(() => {
+        if (isReviewMode) {
+            router.replace('/panel/ustawienia');
+        }
+    }, [router, isReviewMode]);
 
     const portalMutation = useMutation({
         mutationFn: createCustomerPortal,
@@ -38,6 +49,10 @@ export default function SubscriptionPage() {
     };
 
     const isLoading = portalMutation.isPending || checkoutMutation.isPending;
+
+    if (isReviewMode) {
+        return null;
+    }
 
     return (
         <Card>

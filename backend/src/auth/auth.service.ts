@@ -7,6 +7,7 @@ import { MailService } from 'src/mail/mail.service';
 import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHash } from 'crypto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { effectiveAccountStatus, isAppStoreReviewMode } from 'src/common/app-review';
 
 @Injectable()
 export class AuthService {
@@ -38,7 +39,8 @@ export class AuthService {
 
         const payload = {
             sub: newUser.id, email: newUser.email, role: newUser.role,
-            status: newUser.account_status, firstName: newUser.first_name,
+            status: effectiveAccountStatus(this.configService, newUser.account_status),
+            firstName: newUser.first_name,
             avatar_url: newUser.avatar_url,
         };
         const accessToken = await this.jwtService.signAsync(payload);
@@ -60,7 +62,8 @@ export class AuthService {
 
         const payload = {
             sub: user.id, email: user.email, role: user.role,
-            status: user.account_status, firstName: user.first_name,
+            status: effectiveAccountStatus(this.configService, user.account_status),
+            firstName: user.first_name,
             avatar_url: user.avatar_url,
         };
         const accessToken = await this.jwtService.signAsync(payload);
@@ -80,7 +83,12 @@ export class AuthService {
         }
 
         const { password_hash, ...result } = user;
-        return result;
+
+        return {
+            ...result,
+            account_status: effectiveAccountStatus(this.configService, result.account_status),
+            trial_expires_at: isAppStoreReviewMode(this.configService) ? null : result.trial_expires_at,
+        };
     }
 
     async refreshSession(userId: string) {
@@ -93,7 +101,7 @@ export class AuthService {
             sub: user.id,
             email: user.email,
             role: user.role,
-            status: user.account_status,
+            status: effectiveAccountStatus(this.configService, user.account_status),
             firstName: user.first_name,
         };
         const accessToken = await this.jwtService.signAsync(payload);

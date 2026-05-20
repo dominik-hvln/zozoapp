@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAppStoreReviewMode } from '@/lib/app-review';
 
 const registerSchema = z.object({
     firstName: z.string().min(2, 'Imię musi mieć co najmniej 2 znaki'),
@@ -31,6 +32,7 @@ const registerSchema = z.object({
 type RegisterFormValues = z.infer<typeof registerSchema>;
 
 export function RegisterForm() {
+    const { isReviewMode } = useAppStoreReviewMode();
     const router = useRouter();
     const setToken = useAuthStore((state) => state.setToken);
     const {
@@ -64,7 +66,11 @@ export function RegisterForm() {
         <Card className="w-full max-w-md">
             <CardHeader>
                 <CardTitle>Stwórz nowe konto</CardTitle>
-                <CardDescription>Załóż darmowe, 14-dniowe konto próbne.</CardDescription>
+                <CardDescription>
+                    {isReviewMode
+                        ? 'Załóż konto w ZozoApp i zarządzaj tatuażami dla dzieci.'
+                        : 'Załóż darmowe, 14-dniowe konto próbne.'}
+                </CardDescription>
             </CardHeader>
             <CardContent>
                 <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

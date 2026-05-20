@@ -79,7 +79,10 @@ export function Header() {
     }).format(new Date());
 
     return (
-        <header className={cn("text-white sticky top-4 z-40 px-4", {"top-14" : isNativeMobile})}>
+        <header className={cn(
+            "text-white z-40 px-4 shrink-0",
+            isNativeMobile ? "pt-safe" : "sticky top-4",
+        )}>
             <div className="container mx-auto bg-[#466ec6] flex h-16 lg:h-20 items-center justify-between px-4 rounded-[20px]">
                 <div className="flex items-center gap-6">
                     <Link href="/panel">
